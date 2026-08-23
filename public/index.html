@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>수냉이네 전체 운영판 미리보기</title>
+<style>
+:root{
+  --navy:#102a4d; --navy2:#173a65; --bg:#f4f6f9; --card:#fff; --line:#e5e7eb;
+  --muted:#6b7280; --yellow:#f4c542; --green:#15803d; --red:#b91c1c; --blue:#2563eb;
+  --orange:#c96b11; --purple:#6d28d9;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,"Segoe UI","Noto Sans KR",sans-serif;color:#111827}
+.app{max-width:1500px;margin:auto;padding:12px}
+.header{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;border-radius:18px;padding:18px}
+.header-top{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+h1{margin:0;font-size:25px}.sub{font-size:12px;color:#dbe7f5;margin-top:4px}
+.datebar{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+button,input,select{font:inherit}
+button{border:0;border-radius:9px;padding:9px 11px;font-weight:850;cursor:pointer}
+input,select{border:1px solid var(--line);border-radius:8px;padding:8px;background:#fff}
+.yellow{background:var(--yellow)} .white{background:#fff;color:var(--navy)} .navy{background:var(--navy);color:#fff}
+.tabs{display:flex;gap:6px;overflow:auto;margin-top:15px;padding-bottom:2px}
+.tab{background:#ffffff1a;color:#fff;padding:9px 12px;border-radius:9px;white-space:nowrap;font-size:12px;font-weight:850}
+.tab.on{background:#fff;color:var(--navy)}
+.page{display:none}.page.on{display:block}
+.grid{display:grid;gap:10px}.g5{grid-template-columns:repeat(5,1fr)}.g4{grid-template-columns:repeat(4,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:repeat(2,1fr)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:13px}
+.k{font-size:11px;color:var(--muted)} .v{font-size:27px;font-weight:950;margin-top:4px}.v.big{font-size:38px}
+.section{margin-top:11px}.section-title{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.badge{display:inline-block;border-radius:999px;padding:3px 7px;font-size:10px;font-weight:900}
+.b-blue{background:#dbeafe;color:#1d4ed8}.b-green{background:#dcfce7;color:#166534}.b-yellow{background:#fef3c7;color:#92400e}.b-red{background:#fee2e2;color:#991b1b}.b-gray{background:#f3f4f6;color:#4b5563}.b-purple{background:#ede9fe;color:#6d28d9}
+.hero{display:grid;grid-template-columns:1.55fr .9fr;gap:10px;margin-top:11px}
+.goal{background:linear-gradient(135deg,#fff8dc,#fff);border:1px solid #f0dfa1;border-radius:16px;padding:15px}
+.goal-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-end}.goal-title{font-size:13px;color:#7c5a00;font-weight:900}.goal-v{font-size:27px;font-weight:950}
+.progress{height:14px;background:#eee;border-radius:999px;overflow:hidden;margin-top:10px}.bar{height:100%;width:41%;background:linear-gradient(90deg,#f2c84b,#e59d16)}
+.pills{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}.pill{font-size:10px;background:#fff;border:1px solid #eadba2;border-radius:999px;padding:4px 7px}
+.primary-summary{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.primary{padding:16px}.primary .k{font-size:13px;font-weight:900}.primary .v{font-size:38px}
+.scroll{overflow:auto}table{width:100%;border-collapse:collapse;min-width:1100px;background:#fff}th,td{padding:8px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap}th{font-size:11px;background:#f8fafc;color:#475569}td:first-child,th:first-child{text-align:left}.name{font-weight:900}
+.small{font-size:10px;color:var(--muted)}.lunch{font-size:17px;font-weight:950;color:var(--green)}.money{font-weight:900;text-align:right}.right{text-align:right}
+.quick{display:flex;gap:4px;justify-content:center}.quick button{font-size:10px;padding:5px 7px;background:#f3f4f6}
+.notice{background:#eef4ff;color:#1e3a8a;border-radius:12px;padding:10px 12px;font-size:12px}
+.filter{display:flex;gap:7px;align-items:end;flex-wrap:wrap}.filter label{font-size:10px;color:#475569}
+.list{display:grid;gap:7px}.row{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:9px;border:1px solid var(--line);border-radius:11px}
+.invoice{display:grid;grid-template-columns:1.2fr .8fr .8fr .8fr;gap:7px;align-items:center}
+.expense-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.mini-chart{height:140px;display:flex;align-items:end;gap:8px;padding:12px 4px 4px}.col{flex:1;background:#dbe4ef;border-radius:6px 6px 0 0;min-height:20px;position:relative}.col span{position:absolute;bottom:-18px;left:0;right:0;text-align:center;font-size:9px;color:#6b7280}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:10px;color:#6b7280}
+.manage-row{display:grid;grid-template-columns:28px minmax(180px,1.5fr) 100px 100px 110px 1fr 70px;gap:8px;align-items:center;padding:9px;border-bottom:1px solid var(--line)}
+.drag{color:#94a3b8}.hidden{display:none}
+@media(max-width:950px){.g5,.g4,.g3{grid-template-columns:repeat(2,1fr)}.g2,.hero{grid-template-columns:1fr}.primary-summary{grid-template-columns:1fr 1fr}.expense-grid{grid-template-columns:repeat(2,1fr)}.app{padding:6px}}
+.finance-lock{display:inline-flex;align-items:center;gap:6px;background:#eef2f7;border:1px solid #d8dee8;border-radius:999px;padding:6px 9px;font-size:11px;font-weight:900;color:#334155}
+.finance-hidden{filter:blur(5px);user-select:none}
+.finance-panel.locked .finance-value{filter:blur(5px);user-select:none}
+.finance-panel.locked .finance-detail{display:none}
+.lock-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.unlock-note{font-size:10px;color:var(--muted)}
+.locked-tab{position:relative}.locked-tab::after{content:' 🔒';font-size:11px}
+.rangebar{display:flex;gap:7px;align-items:end;flex-wrap:wrap;margin-bottom:10px}
+.rangebar .preset{background:#f3f4f6}.rangebar .preset.on{background:#102a4d;color:#fff}
+.rank-list{display:grid;gap:7px}.rank-item{display:grid;grid-template-columns:34px 1fr auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.rank-num{font-weight:950;color:#64748b}.rank-bar{height:7px;background:#e5e7eb;border-radius:999px;overflow:hidden;margin-top:5px}.rank-fill{height:100%;background:#94a3b8;border-radius:999px}
+.month-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+@media(max-width:950px){.month-grid{grid-template-columns:repeat(2,1fr)}}
+.backend-badge{display:inline-flex;align-items:center;gap:5px;background:#e8f5e9;color:#166534;border:1px solid #bbdfc1;border-radius:999px;padding:5px 8px;font-size:10px;font-weight:900}
+.achievement-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.ach{border:1px solid var(--line);border-radius:13px;padding:11px;background:#fff}.ach.locked{filter:grayscale(1);opacity:.48}.ach-ico{font-size:24px}.ach-title{font-weight:900;margin-top:3px}.ach-date{font-size:10px;color:var(--muted);margin-top:3px}
+.profit-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.profit-main{font-size:31px;font-weight:950;margin-top:4px}
+.bank-box{border:2px solid #d7e3ef;border-radius:16px;padding:15px;background:#fbfdff}
+.bank-formula{font-size:11px;color:#64748b;margin-top:5px}
+.expense-extra{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+@media(max-width:950px){.achievement-grid,.profit-grid{grid-template-columns:repeat(2,1fr)}.expense-extra{grid-template-columns:1fr 1fr}}
+.liveSave{position:fixed;right:14px;bottom:14px;z-index:9999;background:#102a4d;color:#fff;padding:9px 12px;border-radius:999px;font-size:11px;font-weight:900;box-shadow:0 4px 18px #0003}.the-input{width:62px}.tiny{font-size:10px;color:#64748b}.modal.hidden{display:none!important}.dragging{opacity:.35}.linkname{color:inherit;text-decoration:none}.linkname:hover{text-decoration:underline}</style>
+</head>
+<body>
+<div class="app">
+
+<div class="header">
+  <div class="header-top">
+    <div>
+      <h1>⚓ 수냉이네 운영 대시보드</h1>
+      <div class="sub">예약 · 생산 · 매출 · 입금 · 지출 · 세금계산서 · 거래처 · 시즌목표 통합관리</div>
+      <div style="margin-top:6px"><span class="backend-badge">✅ Supabase 저장</span> <span class="backend-badge">✅ Vercel 선상24 연동</span></div><div style="font-size:11px;color:#fbe6a7;margin-top:4px">실사용판 · 자동저장 / 재무정보 비밀번호 보호</div>
+    </div>
+    <div class="datebar">
+      <button class="white" id="prevDay">◀</button>
+      <input id="opDate" type="date">
+      <button class="white" id="todayBtn">오늘</button>
+      <button class="white" id="nextDay">▶</button>
+      <button class="yellow" id="scanAllBtn">🔄 예약현황 전체 확인</button>
+      <button class="white" id="financeUnlockBtn">🔓 재무정보 열림</button>
+    </div>
+  </div>
+  <div class="tabs">
+    <button class="tab on" data-page="today">오늘 운영</button>
+    <button class="tab" data-page="reservations">예약 관리</button>
+    <button class="tab locked-tab" data-page="sales">매출·입금</button>
+    <button class="tab locked-tab" data-page="expenses">지출</button>
+    <button class="tab locked-tab" data-page="tax">세금계산서</button>
+    <button class="tab locked-tab" data-page="profit">손익 분석</button><button class="tab" data-page="history">운영 기록</button>
+    <button class="tab" data-page="clients">거래처 관리</button>
+    <button class="tab" data-page="settings">설정</button>
+  </div>
+</div>
+
+<!-- TODAY -->
+<section class="page on" id="today">
+  <div class="hero">
+    <div class="goal">
+      <div class="goal-top">
+        <div><div class="goal-title">🏖️ 다낭행 게이지</div><div class="goal-v">프리시즌 적립 중</div></div>
+        <div class="right"><div class="k">본시즌 목표</div><b>일평균 250개</b></div>
+      </div>
+      <div class="progress"><div class="bar" id="goalBar"></div></div>
+      <div class="pills">
+        <span class="pill">8월 판매 = 보너스 차감</span>
+        <span class="pill">9/1~12/5 본시즌</span>
+        <span class="pill" id="seasonPaid">현재 누적 0개</span>
+        <span class="pill">목표 대비 +45개</span>
+      </div>
+    </div>
+
+    <div class="primary-summary">
+      <div class="card primary"><div class="k">오늘 도시락</div><div class="v big" id="sumPrepared">0개</div></div>
+      <div class="card primary"><div class="k">🍲 국</div><div class="v big" id="sumSoup">0개</div></div>
+    </div>
+  </div>
+
+  <div class="grid g5 section">
+    <div class="card"><div class="k">정상/수기확정</div><div class="v" id="sumOk">0척</div></div>
+    <div class="card"><div class="k">변동</div><div class="v" id="sumChanged">0건</div></div>
+    <div class="card"><div class="k">확인필요</div><div class="v" id="sumWarn">0건</div></div>
+    <div class="card finance-panel" id="expectedRevenueCard"><div class="k">오늘 예상매출</div><div class="v finance-value" id="sumSales">••••••원</div></div>
+    <div class="card"><div class="k">오늘 유료수량</div><div class="v" id="sumPaid">0개</div></div>
+  </div>
+
+  <div class="section card">
+    <div class="section-title">
+      <div><b>🚢 오늘 예약/생산 현황</b><div class="small">거래중 · 출처 · 국 여부는 거래처명 아래 배지로 표시</div></div>
+      <div><span class="badge b-blue">선상24</span> <span class="badge b-yellow">더피싱</span> <span class="badge b-purple">🍲 국</span></div>
+    </div>
+    <div class="scroll"><table>
+      <thead><tr><th>거래처</th><th>정원/손님최대</th><th>예약/남은자리</th><th>이전/변동</th><th>현재</th><th>도시락</th><th>상태</th><th>빠른처리</th><th>배송</th></tr></thead><tbody id="todayRows"></tbody>
+    </table></div>
+  </div>
+
+  <div class="grid g3 section finance-panel locked" id="todayFinance">
+    <div class="card"><b>💰 오늘 매출</b><div class="v finance-value">872,000원</div><div class="small finance-detail">유료 105개 · 서비스 4개</div></div>
+    <div class="card"><b>🏦 오늘 입금</b><div class="v finance-value">320,000원</div><div class="finance-detail" style="margin-top:6px"><span class="badge b-red" style="font-size:12px;padding:5px 9px">💸 미수 328,000원 · 2건</span></div></div>
+    <div class="card"><b>🧾 세금계산서</b><div class="v finance-value">3건</div><div class="small finance-detail">발행대기 1건 · 발행완료 2건</div></div>
+  </div>
+  <div class="lock-row section">
+    <span class="finance-lock" id="financeState">🔒 재무정보 잠김</span>
+    <span class="unlock-note">도시락·국·예약·배송 정보는 그대로 보이고 금액만 가립니다.</span>
+  </div>
+
+  <div class="section card">
+    <div class="section-title"><div><b>🏆 최근 업적</b><div class="small">실제 누적데이터와 자동 연동</div></div><button data-pagejump="history">전체 업적 보기</button></div>
+    <div class="achievement-grid">
+      <div class="ach"><div class="ach-ico">🥇</div><div class="ach-title">하루 300개 달성</div><div class="ach-date">2026.09.21 달성</div></div>
+      <div class="ach"><div class="ach-ico">🔥</div><div class="ach-title">7일 연속 무사고</div><div class="ach-date">2026.09.18 달성</div></div>
+      <div class="ach"><div class="ach-ico">⚓</div><div class="ach-title">거래처 10척 돌파</div><div class="ach-date">2026.09.03 달성</div></div>
+      <div class="ach locked"><div class="ach-ico">👑</div><div class="ach-title">성수기 일평균 250개</div><div class="ach-date">아직 잠김</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- RESERVATIONS -->
+<section class="page" id="reservations">
+  <div class="section card">
+    <div class="section-title"><div><b>예약 관리</b><div class="small">선상24 자동조회 + 더피싱 남은자리 수기</div></div><button class="yellow">예약현황 전체 확인</button></div>
+    <div class="notice">빠른처리(예약마감/출항없음/수기확정)는 자동조회보다 우선 적용. 거래중지 거래처는 숨김.</div>
+    <div style="height:10px"></div>
+    <div class="scroll"><table>
+      <thead><tr><th>거래처</th><th>예약방식</th><th>손님최대</th><th>예약인원</th><th>도시락</th><th>선장/사무장 식사</th><th>국</th><th>상태</th></tr></thead>
+      <tbody id="reservationRows"></tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- SALES -->
+<section class="page" id="sales">
+  <div class="section card">
+    <div class="section-title"><div><b>매출·입금</b><div class="small">기간조회 / 미수 / 입금 FIFO 자동상계</div></div><button class="navy" id="addPaymentBtn">+ 입금 등록</button></div>
+    <div class="rangebar"><button class="preset" data-range="today">오늘</button><button class="preset" data-range="week">이번주</button><button class="preset on" data-range="month">이번달</button><button class="preset" data-range="custom">직접기간</button><label>시작일<br><input id="salesStart" type="date"></label><label>종료일<br><input id="salesEnd" type="date"></label><button class="yellow" id="salesQueryBtn">조회</button></div>
+  </div>
+  <div class="month-grid section">
+    <div class="card"><div class="k">기간 총매출</div><div class="v" id="fSales">-</div></div>
+    <div class="card"><div class="k">유료 판매</div><div class="v" id="fPaid">-</div></div>
+    <div class="card"><div class="k">입금액</div><div class="v" id="fIncome">-</div></div>
+    <div class="card"><div class="k">총 미수</div><div class="v" id="fDue">-</div></div>
+    <div class="card"><div class="k">서비스</div><div class="v" id="fService">-</div></div>
+  </div>
+  <div id="paymentForm" class="section card hidden">
+    <div class="section-title"><b>입금 등록/수정</b><span class="badge b-blue">오래된 미수 우선 자동상계</span></div>
+    <div class="expense-extra"><label>입금일<br><input id="payDate" type="date"></label><label>거래처<br><select id="payClient"></select></label><label>입금액<br><input id="payAmount"></label><label>메모<br><input id="payMemo"></label><div><br><button class="yellow" id="savePaymentBtn">저장</button> <button id="cancelPaymentBtn">취소</button></div></div>
+  </div>
+  <div class="section card"><div class="section-title"><b>💸 미수금</b><span id="dueTotal" class="badge b-red">0원</span></div><div class="scroll"><table><thead><tr><th>거래처</th><th>납품일</th><th>미수금</th></tr></thead><tbody id="dueRows"></tbody></table></div></div>
+  <div class="section card"><div class="section-title"><b>입금내역</b></div><div class="scroll"><table><thead><tr><th>입금일</th><th>거래처</th><th>금액</th><th>메모</th><th>관리</th></tr></thead><tbody id="paymentRows"></tbody></table></div></div>
+</section>
+
+<!-- EXPENSES -->
+<section class="page" id="expenses">
+  <div class="section card">
+    <div class="section-title"><div><b>지출 관리</b><div class="small">추가·수정·삭제 가능</div></div><button class="navy" id="addExpenseBtn">+ 지출 추가</button></div>
+    <div id="expenseForm" class="card hidden">
+      <div class="expense-extra">
+        <label>날짜<br><input id="exDate" type="date"></label>
+        <label>구분<br><select id="exType"><option>식자재</option><option>용기</option><option>인건비</option><option>기타지출</option></select></label>
+        <label>항목<br><input id="exItem" placeholder="예: 전기공사"></label>
+        <label>금액<br><input id="exAmount"></label>
+        <label>메모<br><input id="exMemo"></label>
+      </div>
+      <div style="margin-top:8px"><button class="yellow" id="saveExpenseBtn">저장</button> <button id="cancelExpenseBtn">취소</button></div>
+    </div>
+    <div class="scroll"><table style="min-width:760px"><thead><tr><th>날짜</th><th>구분</th><th>항목</th><th>금액</th><th>메모</th><th>관리</th></tr></thead><tbody id="expenseRows"></tbody></table></div>
+  </div>
+</section>
+
+<!-- TAX -->
+<section class="page" id="tax">
+  <div class="notice finance-gate" data-finance-page="tax">
+    🔒 <b>세금계산서</b>은 관리자 재무정보입니다. 상단의 <b>재무정보 보기</b>에서 비밀번호를 입력하면 함께 잠금 해제됩니다.
+  </div>
+  <div class="grid g4 section">
+    <div class="card"><div class="k">발행대상</div><div class="v">8건</div></div>
+    <div class="card"><div class="k">발행완료</div><div class="v">5건</div></div>
+    <div class="card"><div class="k">발행대기</div><div class="v">3건</div></div>
+    <div class="card"><div class="k">VAT 합계</div><div class="v">356,000원</div></div>
+  </div>
+  <div class="section card">
+    <div class="section-title"><b>세금계산서 발행 관리</b><button class="navy">선택 발행완료 처리</button></div>
+    <div class="scroll"><table style="min-width:850px">
+      <thead><tr><th>거래처/묶음</th><th>귀속기간</th><th>유료수량</th><th>공급가액</th><th>VAT</th><th>합계</th><th>상태</th><th>상세</th></tr></thead>
+      <tbody>
+        <tr><td class="name">가가호 (피싱브로)</td><td>2026년 9월</td><td><b>140개</b></td><td>1,120,000</td><td>112,000</td><td>1,232,000</td><td><span class="badge b-yellow">발행대기</span></td><td><button class="detailBtn" data-detail="tax1">상세보기</button></td></tr>
+        <tr><td class="name">미르호 + 포세이돈</td><td>2026년 9월</td><td><b>200개</b></td><td>1,600,000</td><td>160,000</td><td>1,760,000</td><td><span class="badge b-green">발행완료</span></td><td><button class="detailBtn" data-detail="tax2">상세보기</button></td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="section card hidden" id="tax1">
+    <div class="section-title"><b>가가호 2026년 9월 상세</b><span><span class="badge b-green">입금완료</span> <span class="badge b-yellow">계산서 대기</span></span></div>
+    <div class="scroll"><table style="min-width:760px">
+      <thead><tr><th>날짜</th><th>유료</th><th>서비스</th><th>적용단가</th><th>공급가액</th><th>VAT</th><th>합계</th></tr></thead>
+      <tbody>
+        <tr><td>09/01</td><td>20</td><td>2</td><td>8,000</td><td>160,000</td><td>16,000</td><td>176,000</td></tr>
+        <tr><td>09/02</td><td>18</td><td>1</td><td>8,000</td><td>144,000</td><td>14,400</td><td>158,400</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="section card hidden" id="tax2">
+    <div class="section-title"><b>미르호 + 포세이돈 계산서 묶음 상세</b><span class="badge b-green">발행완료</span></div>
+    <div class="grid g2">
+      <div class="card"><div class="k">미르호 유료</div><div class="v">120개</div></div>
+      <div class="card"><div class="k">포세이돈 유료</div><div class="v">80개</div></div>
+    </div>
+    <div class="small" style="margin-top:8px">계산서는 두 배를 합쳐 유료 200개 기준으로 발행. 상세에서는 배별·날짜별 내역 확인.</div>
+  </div>
+</section>
+
+
+<!-- PROFIT -->
+<section class="page" id="profit">
+  <div class="section card finance-gate" data-finance-page="profit">
+    🔒 <b>손익 분석</b>은 관리자 재무정보입니다. 재무정보 잠금을 해제하면 표시됩니다.
+  </div>
+
+  <div class="section card">
+    <div class="section-title">
+      <div><b>📊 손익·원가율 분석</b><div class="small">선택 기간의 실제 매출/지출 데이터를 자동 집계</div></div>
+      <div class="rangebar" style="margin:0">
+        <button class="preset">오늘</button><button class="preset">이번주</button><button class="preset on">이번달</button>
+        <label>시작 <input type="date" value="2026-09-01"></label>
+        <label>종료 <input type="date" value="2026-09-30"></label>
+        <button class="yellow">조회</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="profit-grid section">
+    <div class="card"><div class="k">기간 매출</div><div class="profit-main">18,640,000원</div></div>
+    <div class="card"><div class="k">식자재 원가율</div><div class="profit-main">33.0%</div><div class="small">6,151,200원</div></div>
+    <div class="card"><div class="k">총 직접원가율</div><div class="profit-main">39.4%</div><div class="small">식자재 + 용기</div></div>
+    <div class="card"><div class="k">예상 영업이익</div><div class="profit-main">9,325,000원</div><div class="small">이익률 50.0%</div></div>
+  </div>
+
+  <div class="grid g2 section">
+    <div class="card">
+      <b>원가 구성</b>
+      <div class="list" style="margin-top:9px">
+        <div class="row"><span>식자재</span><b>6,151,200원 · 33.0%</b></div>
+        <div class="row"><span>용기/소모품</span><b>1,193,000원 · 6.4%</b></div>
+        <div class="row"><span>인건비</span><b>1,350,000원</b></div>
+        <div class="row"><span>기타지출</span><b>620,000원</b></div>
+        <div class="row"><span>출항취소 손실</span><b style="color:#b91c1c">95,000원</b></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <b>도시락 1개당 지표</b>
+      <div class="list" style="margin-top:9px">
+        <div class="row"><span>개당 매출</span><b>8,000원</b></div>
+        <div class="row"><span>개당 식자재비</span><b>2,640원</b></div>
+        <div class="row"><span>개당 용기비</span><b>512원</b></div>
+        <div class="row"><span>개당 직접원가</span><b>3,152원</b></div>
+        <div class="row"><span>개당 영업이익</span><b>4,002원</b></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section bank-box">
+    <div class="section-title">
+      <div><b style="font-size:18px">💰 내 돈 찾기 · 예상 통장잔액</b><div class="small">“통장에 대충 얼마 있어야 정상인가?” 확인용</div></div>
+      <span class="badge b-blue">장부 vs 실제통장 비교</span>
+    </div>
+    <div class="grid g4">
+      <div class="card"><div class="k">기초 사업통장</div><div class="v">5,000,000원</div></div>
+      <div class="card"><div class="k">실제 입금</div><div class="v">17,920,000원</div></div>
+      <div class="card"><div class="k">실제 지출</div><div class="v">9,314,000원</div></div>
+      <div class="card"><div class="k">사업주 인출</div><div class="v">3,000,000원</div></div>
+    </div>
+    <div class="grid g3 section">
+      <div class="card"><div class="k">장부상 남은 돈</div><div class="v">9,326,000원</div></div>
+      <div class="card"><div class="k">현재 미수</div><div class="v" style="color:#b91c1c">720,000원</div></div>
+      <div class="card"><div class="k">통장에 있어야 할 돈</div><div class="v big">10,606,000원</div></div>
+    </div>
+    <div class="bank-formula">계산 예: 기초잔액 + 실제입금 - 실제지출 - 사업주인출 = 예상 통장잔액</div>
+    <div class="notice" style="margin-top:10px">실제 통장잔액을 입력하면 차액도 계산: 실제 10,100,000원 → ⚠️ 장부와 통장 차이 -506,000원</div>
+  </div>
+</section>
+
+<!-- HISTORY -->
+<section class="page" id="history">
+  <div class="section card"><div class="filter"><label>시작일<br><input id="histStart" type="date"></label><label>종료일<br><input id="histEnd" type="date"></label><button class="navy" id="histQueryBtn">조회</button></div></div>
+  <div class="section card"><b>📚 운영 기록</b><div class="scroll" style="margin-top:8px"><table><thead><tr><th>날짜</th><th>구분</th><th>거래처/항목</th><th>수량/금액</th><th>메모</th></tr></thead><tbody id="historyRows"></tbody></table></div></div>
+  <div class="section card"><div class="section-title"><div><b>🏆 전체 업적</b></div><span class="badge b-purple">자동판정</span></div><div class="achievement-grid" id="achievementGrid"></div></div>
+</section>
+
+<!-- CLIENTS -->
+<section class="page" id="clients">
+  <div class="section card">
+    <div class="section-title"><div><b>거래처 관리</b><div class="small">☰ 드래그로 정렬 · 수정창에서 한 번에 저장</div></div><button class="yellow" id="addClientBtn">+ 거래처 추가</button></div>
+    <div class="manage-row small" style="font-weight:900;background:#f8fafc"><span></span><span>거래처</span><span>내부등급</span><span>예약방식</span><span>상태</span><span>배송지</span><span>관리</span></div>
+    <div id="clientList"></div>
+  </div>
+  <div class="modal hidden" id="clientModal" style="position:fixed;inset:0;background:#0008;z-index:9998;display:flex;align-items:center;justify-content:center;padding:20px">
+    <div class="card" style="max-width:900px;width:100%;max-height:90vh;overflow:auto">
+      <div class="section-title"><b>거래처 수정</b><button id="closeClientModal">✕</button></div>
+      <div class="expense-grid">
+        <label>배 이름<br><input id="cmName"></label><label>출조점/소속<br><input id="cmAff"></label><label>총정원<br><input id="cmCapacity" type="number"></label><label>내부등급<br><select id="cmGrade"><option>A</option><option>B</option><option>C</option><option>S</option></select></label>
+        <label>예약방식<br><select id="cmSource"><option>선상24</option><option>더피싱</option><option>수기</option></select></label><label>거래상태<br><select id="cmActive"><option value="true">거래중</option><option value="false">거래중지</option></select></label><label>배송지<br><input id="cmDelivery"></label><label>예약페이지 URL<br><input id="cmUrl"></label>
+        <label>단가<br><input id="cmPrice" type="number"></label><label>VAT<br><select id="cmVat"><option>VAT별도</option><option>VAT포함</option></select></label><label>계산서 묶음<br><input id="cmTaxGroup"></label><label>국<br><select id="cmSoup"><option value="true">제공</option><option value="false">미제공</option></select></label>
+        <label>선장 승선<br><select id="cmCaptainOn"><option value="true">승선</option><option value="false">미승선</option></select></label><label>선장 식사<br><select id="cmCaptainMeal"><option value="true">먹음</option><option value="false">안먹음</option></select></label><label>사무장 승선<br><select id="cmManagerOn"><option value="true">승선</option><option value="false">미승선</option></select></label><label>사무장 식사<br><select id="cmManagerMeal"><option value="true">먹음</option><option value="false">안먹음</option></select></label>
+      </div>
+      <div style="margin-top:12px"><button class="yellow" id="saveClientBtn">저장</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- SETTINGS -->
+<section class="page" id="settings">
+  <div class="grid g3 section">
+    <div class="card"><b>💵 기본 가격</b><p class="small">기본 8,000원(VAT 별도) / 8,800원(VAT 포함). 거래처별 개별단가 우선.</p></div>
+    <div class="card"><b>🎁 서비스 규칙</b><p class="small">예: 22명 주문 시 2개 서비스, 11개 이상 1개, 10개 이하 없음. 거래처별 예외 가능.</p></div>
+    <div class="card"><b>🏖️ 시즌 목표</b><p class="small">프리시즌/본시즌 기간, 일평균 목표, 다낭행 게이지 설정.</p></div>
+    <div class="card"><b>🍲 국 기본값</b><p class="small">거래처별 국 따로 여부 저장. 메인 상단에서 총 국 수량 자동합산.</p></div>
+    <div class="card"><b>🧮 VAT/세금계산서</b><p class="small">VAT 포함/별도, 월합산/건별, 발행상태 관리.</p></div>
+    <div class="card"><b>🔐 재무정보 잠금</b><p class="small">매출·입금 / 지출 / 세금계산서 및 오늘운영 금액을 동일 비밀번호로 잠금. 자동잠금 시간 설정.</p></div>
+    <div class="card"><b>☁️ 저장 방식</b><p class="small">Google Sheets + Apps Script. 일별 데이터는 시트에 누적 저장하고 필요한 기간만 조회.</p></div>
+    <div class="card"><b>💾 백업</b><p class="small">Google Sheets 원본 + 수동 백업/복원. 엑셀 내보내기 양식은 추후 확정.</p></div>
+  </div>
+</section>
+
+</div>
+
+<script>
+document.querySelectorAll('.tab').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+    document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
+    btn.classList.add('on');
+    document.getElementById(btn.dataset.page).classList.add('on');
+  });
+});
+
+let financeUnlocked=true;
+const financeBtn=document.getElementById('financeUnlockBtn');
+function refreshFinance(){
+  const p=document.getElementById('todayFinance');
+  const expected=document.getElementById('expectedRevenueCard');
+  const state=document.getElementById('financeState');
+  if(financeUnlocked){
+    p?.classList.remove('locked');
+    expected?.classList.remove('locked');
+    if(state)state.textContent='🔓 재무정보 열림';
+    if(financeBtn)financeBtn.textContent='🔓 재무정보 잠금';
+    document.querySelectorAll('.locked-tab').forEach(x=>x.classList.remove('locked-tab'));
+    document.querySelectorAll('.finance-gate').forEach(x=>x.style.display='none');
+  }else{
+    p?.classList.add('locked');
+    expected?.classList.add('locked');
+    if(state)state.textContent='🔒 재무정보 잠김';
+    if(financeBtn)financeBtn.textContent='🔒 재무정보 보기';
+    document.querySelectorAll('[data-page="sales"],[data-page="expenses"],[data-page="tax"],[data-page="profit"]').forEach(x=>x.classList.add('locked-tab'));
+    document.querySelectorAll('.finance-gate').forEach(x=>x.style.display='block');
+  }
+}
+financeBtn?.addEventListener('click',()=>{
+  if(financeUnlocked){financeUnlocked=false;document.querySelectorAll('[data-pagejump]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const target=btn.dataset.pagejump;
+    const tab=document.querySelector(`.tab[data-page="${target}"]`);
+    if(tab)tab.click();
+  });
+});
+refreshFinance();return;}
+  const pw=prompt('재무정보 비밀번호를 입력하세요.\\n(미리보기 비밀번호: 1234)');
+  if(pw==='1234'){financeUnlocked=true;refreshFinance();}
+  else if(pw!==null)alert('비밀번호가 맞지 않습니다.');
+});
+document.querySelectorAll('.tab').forEach(btn=>{
+  btn.addEventListener('click',(e)=>{
+    if(['sales','expenses','tax','profit'].includes(btn.dataset.page) && !financeUnlocked){
+      e.stopImmediatePropagation();
+      const pw=prompt('재무정보 비밀번호를 입력하세요.\\n(미리보기 비밀번호: 1234)');
+      if(pw==='1234'){financeUnlocked=true;refreshFinance();btn.click();}
+    }
+  },true);
+});
+document.querySelectorAll('.detailBtn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.getElementById(btn.dataset.detail)?.classList.toggle('hidden');
+  });
+});
+refreshFinance();
+</script>
+
+<div id="liveSave" class="liveSave">☁️ 연결 중...</div>
+<script>
+const $=id=>document.getElementById(id), won=n=>(Number(n)||0).toLocaleString('ko-KR')+'원';
+let APP={rows:[],clients:[],financeToken:sessionStorage.getItem('financeToken')||'',date:'',editingClient:null,editingExpense:null,editingPayment:null};
+async function api(url,opt={}){opt.headers={...(opt.headers||{}),'Content-Type':'application/json'};if(APP.financeToken)opt.headers['x-finance-token']=APP.financeToken;const r=await fetch(url,opt);const j=await r.json();if(!r.ok)throw new Error(j.error||'요청 실패');return j}
+function saveState(t){$('liveSave').textContent=t} function today(){return new Date().toLocaleDateString('sv-SE')} function addDays(d,n){const x=new Date(d+'T00:00:00');x.setDate(x.getDate()+n);return x.toLocaleDateString('sv-SE')}
+function badgeSource(s){return s==='선상24'?'b-blue':s==='더피싱'?'b-yellow':'b-gray'}
+function setDate(d){$('opDate').value=d;APP.date=d;loadDay()}
+function financeMask(){const unlocked=!!APP.financeToken;document.querySelectorAll('.finance-sensitive,.finance-panel').forEach(x=>x.classList.toggle('locked',!unlocked));$('financeState').textContent=unlocked?'🔓 재무정보 열림':'🔒 재무정보 잠김';$('financeUnlockBtn').textContent=unlocked?'🔓 재무정보 잠금':'🔒 재무정보 보기';if(!unlocked)$('sumSales').textContent='••••••원'}
+async function loadDay(){APP.date=$('opDate').value||today();saveState('☁️ 불러오는 중...');['sumPrepared','sumSoup','sumOk','sumChanged','sumWarn','sumPaid'].forEach(id=>$(id).textContent='—');try{const d=await api('/api/bootstrap?date='+APP.date);APP.rows=d.rows;renderToday(d);saveState('☁️ 저장됨')}catch(e){saveState('⚠️ '+e.message)}}
+function renderToday(d){$('sumPrepared').textContent=d.summary.prepared+'개';$('sumSoup').textContent=d.summary.soup+'개';$('sumOk').textContent=d.summary.ok+'척';$('sumChanged').textContent=d.summary.changed+'건';$('sumWarn').textContent=d.summary.warn+'건';$('sumPaid').textContent=d.summary.paid+'개';if(APP.financeToken)$('sumSales').textContent=won(d.summary.sales);$('seasonPaid').textContent='현재 누적 '+d.summary.seasonPaid.toLocaleString()+'개';$('goalBar').style.width=Math.min(100,d.summary.seasonPaid/(250*30)*100)+'%';$('todayRows').innerHTML=d.rows.map((r,i)=>rowHtml(r,i)).join('');$('reservationRows').innerHTML=d.rows.map(r=>`<tr><td class="name">${nameLink(r)}</td><td><span class="badge ${badgeSource(r.source)}">${r.source}</span></td><td>${r.guest_max}명</td><td>${r.order.reservation??'-'}</td><td class="lunch">${r.order.prepared??0}개</td><td>선장 ${r.captain_meal?'O':'X'} / 사무장 ${r.manager_meal?'O':'X'}</td><td>${r.soup_separate?'<span class="badge b-purple">국</span>':'-'}</td><td>${r.order.status||'확인필요'}</td></tr>`).join('')}
+function nameLink(r){const label=`${r.name}${r.affiliation?' ('+r.affiliation+')':''}`;return r.reservation_url?`<a class="linkname" href="${r.reservation_url}" target="_blank">${label}</a>`:label}
+function rowHtml(r,i){const o=r.order||{},cur=o.reservation??null,delta=(cur!=null&&r.previous!=null)?cur-r.previous:null;let reserve=r.source==='더피싱'?`남은 <input class="the-input" id="remain${i}" value="${o.remaining??''}">`:(cur==null?'-':`예약 ${cur} · 남은 ${Math.max(0,r.guest_max-cur)}`);return `<tr><td class="name">${nameLink(r)}<div class="small"><span class="badge b-green">거래중</span> <span class="badge ${badgeSource(r.source)}">${r.source}</span>${r.soup_separate?' <span class="badge b-purple">🍲 국</span>':''}</div></td><td>${r.capacity} / ${r.guest_max}</td><td>${reserve}</td><td>${r.previous==null?'-':`<b>${r.previous}</b> → ${delta==null||delta===0?'-':(delta>0?'+':'')+delta}`}</td><td><b>${cur??'-'}</b></td><td class="lunch"><b>${o.prepared||0}개</b><div class="small">유료 ${o.paid||0} / 서비스 ${o.service||0}</div></td><td><span class="badge ${o.status==='정상'||o.status==='수기확정'?'b-green':'b-gray'}">${o.status||'확인필요'}</span></td><td><div class="quick"><button onclick="quick(${i},'예약마감')">예약마감</button><button onclick="quick(${i},'출항없음')">출항없음</button><button onclick="manualConfirm(${i})">수기확정</button></div></td><td>${r.delivery||'-'}</td></tr>`}
+async function quick(i,status){const r=APP.rows[i],b={date:APP.date,client_id:r.id,status,confirm_method:status};if(status!=='출항없음'){if(r.source==='더피싱')b.remaining=Number($('remain'+i).value);else b.reservation=r.order.reservation??0}await api('/api/order',{method:'POST',body:JSON.stringify(b)});loadDay()}
+async function manualConfirm(i){const r=APP.rows[i],cur=r.order.reservation??0;const reservation=prompt(r.name+' 예약인원 직접입력',cur);if(reservation==null)return;const service=prompt('서비스 수량 (비우면 자동계산)',r.order.service??'');await api('/api/order',{method:'POST',body:JSON.stringify({date:APP.date,client_id:r.id,reservation:Number(reservation)||0,service:service===''?null:Number(service)||0,status:'수기확정',confirm_method:'수기확정'})});loadDay()}
+async function scanAll(){saveState('🔄 선상24 조회 중...');$('scanAllBtn').disabled=true;try{const d=await api('/api/sunsang?date='+APP.date);const bad=d.results.filter(x=>!x.ok).length;saveState(`☁️ 조회 완료 ${d.results.length-bad}척${bad?' · 확인 '+bad+'척':''}`);await loadDay()}catch(e){saveState('⚠️ '+e.message)}finally{$('scanAllBtn').disabled=false}}
+async function financeUnlock(){if(APP.financeToken){APP.financeToken='';sessionStorage.removeItem('financeToken');financeMask();return}const pw=prompt('재무정보 비밀번호');if(pw==null)return;try{const d=await api('/api/auth',{method:'POST',body:JSON.stringify({password:pw})});APP.financeToken=d.token;sessionStorage.setItem('financeToken',d.token);financeMask();await loadDay()}catch(e){alert(e.message)}}
+async function loadClients(){const d=await api('/api/clients');APP.clients=d.clients;renderClients()}
+function renderClients(){$('clientList').innerHTML=APP.clients.map(c=>`<div class="manage-row" draggable="true" data-id="${c.id}"><span class="drag">☰</span><span class="name">${nameLink(c)}</span><span>${c.grade}</span><span><span class="badge ${badgeSource(c.source)}">${c.source}</span></span><span><span class="badge ${c.active?'b-green':'b-gray'}">${c.active?'거래중':'중지'}</span></span><span>${c.delivery||'-'}</span><button onclick="openClient('${c.id}')">수정</button></div>`).join('');bindDrag()}
+function bindDrag(){let drag=null;$('clientList').querySelectorAll('.manage-row').forEach(el=>{el.addEventListener('dragstart',()=>{drag=el;el.classList.add('dragging')});el.addEventListener('dragend',async()=>{el.classList.remove('dragging');const order=[...$('clientList').children].map(x=>x.dataset.id);await api('/api/clients',{method:'PATCH',body:JSON.stringify({order})});loadDay()});el.addEventListener('dragover',e=>{e.preventDefault();const after=[...$('clientList').children].find(x=>x!==drag&&e.clientY<x.getBoundingClientRect().top+x.offsetHeight/2);$('clientList').insertBefore(drag,after||null)})})}
+function openClient(id){const c=APP.clients.find(x=>x.id===id)||{};APP.editingClient=id||null;['Name','Aff','Delivery','Url','TaxGroup'].forEach(()=>{});$('cmName').value=c.name||'';$('cmAff').value=c.affiliation||'';$('cmCapacity').value=c.capacity||22;$('cmGrade').value=c.grade||'C';$('cmSource').value=c.source||'수기';$('cmActive').value=String(c.active!==false);$('cmDelivery').value=c.delivery||'';$('cmUrl').value=c.reservation_url||'';$('cmPrice').value=c.unit_price||8000;$('cmVat').value=c.vat_mode||'VAT별도';$('cmTaxGroup').value=c.tax_group||c.name||'';$('cmSoup').value=String(!!c.soup_separate);$('cmCaptainOn').value=String(c.captain_on!==false);$('cmCaptainMeal').value=String(c.captain_meal!==false);$('cmManagerOn').value=String(!!c.manager_on);$('cmManagerMeal').value=String(!!c.manager_meal);$('clientModal').classList.remove('hidden')}
+async function saveClient(){const old=APP.clients.find(x=>x.id===APP.editingClient)||{};const b={...old,id:APP.editingClient||undefined,name:$('cmName').value,affiliation:$('cmAff').value,capacity:Number($('cmCapacity').value),grade:$('cmGrade').value,source:$('cmSource').value,active:$('cmActive').value==='true',delivery:$('cmDelivery').value,reservation_url:$('cmUrl').value,unit_price:Number($('cmPrice').value),vat_mode:$('cmVat').value,tax_group:$('cmTaxGroup').value,soup_separate:$('cmSoup').value==='true',captain_on:$('cmCaptainOn').value==='true',captain_meal:$('cmCaptainMeal').value==='true',manager_on:$('cmManagerOn').value==='true',manager_meal:$('cmManagerMeal').value==='true'};await api('/api/clients',{method:'POST',body:JSON.stringify(b)});$('clientModal').classList.add('hidden');await loadClients();await loadDay()}
+async function needFinance(){if(!APP.financeToken){await financeUnlock();if(!APP.financeToken)throw new Error('잠금')}}
+async function loadFinance(){await needFinance();const start=$('salesStart').value,end=$('salesEnd').value;const f=await api(`/api/finance?start=${start}&end=${end}`);$('fSales').textContent=won(f.sales);$('fPaid').textContent=f.paid+'개';$('fIncome').textContent=won(f.income);$('fDue').textContent=won(f.receivable);$('fService').textContent=f.service+'개';$('dueTotal').textContent=won(f.receivable);$('dueRows').innerHTML=f.outstanding.map(x=>`<tr><td>${APP.clients.find(c=>c.id===x.client_id)?.name||x.client_id}</td><td>${x.order_date}</td><td>${won(x.due)}</td></tr>`).join('');const pc=[...document.querySelectorAll('#profit .profit-main')];if(pc[0])pc[0].textContent=won(f.sales);if(pc[1])pc[1].textContent=f.foodRate.toFixed(1)+'%';if(pc[2])pc[2].textContent=f.directRate.toFixed(1)+'%';if(pc[3])pc[3].textContent=won(f.profit);const bank=[...document.querySelectorAll('#profit .v')];if(bank.length)bank[bank.length-1].textContent=won(f.expectedBank);await loadPayments();await loadExpenses()}
+async function loadPayments(){const d=await api(`/api/payment?start=${$('salesStart').value}&end=${$('salesEnd').value}`);$('paymentRows').innerHTML=d.items.map(p=>`<tr><td>${p.payment_date}</td><td>${p.clients?.name||p.client_id}</td><td>${won(p.amount)}</td><td>${p.memo||''}</td><td><button onclick='editPayment(${JSON.stringify(JSON.stringify(p))})'>수정</button> <button onclick="deletePayment(${p.id})">삭제</button></td></tr>`).join('')}
+function editPayment(raw){const p=JSON.parse(raw);APP.editingPayment=p.id;$('paymentForm').classList.remove('hidden');$('payDate').value=p.payment_date;$('payClient').value=p.client_id;$('payAmount').value=p.amount;$('payMemo').value=p.memo||''}
+async function savePayment(){await needFinance();await api('/api/payment',{method:'POST',body:JSON.stringify({id:APP.editingPayment,date:$('payDate').value,client_id:$('payClient').value,amount:Number($('payAmount').value),memo:$('payMemo').value})});APP.editingPayment=null;$('paymentForm').classList.add('hidden');loadFinance()}
+async function deletePayment(id){if(!confirm('이 입금내역을 삭제할까요?'))return;await api('/api/payment?id='+id,{method:'DELETE'});loadFinance()}
+async function loadExpenses(){await needFinance();const d=await api(`/api/expense?start=${$('salesStart').value}&end=${$('salesEnd').value}`);$('expenseRows').innerHTML=d.items.map(x=>`<tr><td>${x.expense_date}</td><td>${x.type}</td><td>${x.item||''}</td><td>${won(x.amount)}</td><td>${x.memo||''}</td><td><button onclick='editExpense(${JSON.stringify(JSON.stringify(x))})'>수정</button> <button onclick="deleteExpense(${x.id})">삭제</button></td></tr>`).join('')}
+function editExpense(raw){const x=JSON.parse(raw);APP.editingExpense=x.id;$('expenseForm').classList.remove('hidden');$('exDate').value=x.expense_date;$('exType').value=x.type;$('exItem').value=x.item||'';$('exAmount').value=x.amount;$('exMemo').value=x.memo||''}
+async function saveExpense(){await needFinance();await api('/api/expense',{method:'POST',body:JSON.stringify({id:APP.editingExpense,date:$('exDate').value,type:$('exType').value,item:$('exItem').value,amount:Number($('exAmount').value),memo:$('exMemo').value})});APP.editingExpense=null;$('expenseForm').classList.add('hidden');loadFinance()}
+async function deleteExpense(id){if(!confirm('이 지출내역을 삭제할까요?'))return;await api('/api/expense?id='+id,{method:'DELETE'});loadFinance()}
+async function loadHistory(){const d=await api(`/api/history?start=${$('histStart').value}&end=${$('histEnd').value}`);let rows=[];d.orders.forEach(x=>rows.push([x.order_date,'주문',x.clients?.name||x.client_id,`${x.paid||0}개 / ${won(x.supply_amount)}`,x.memo||'']));d.expenses.forEach(x=>rows.push([x.expense_date,'지출',`${x.type} ${x.item||''}`,won(x.amount),x.memo||'']));d.payments.forEach(x=>rows.push([x.payment_date,'입금',x.clients?.name||x.client_id,won(x.amount),x.memo||'']));rows.sort((a,b)=>b[0].localeCompare(a[0]));$('historyRows').innerHTML=rows.map(r=>`<tr>${r.map(x=>`<td>${x}</td>`).join('')}</tr>`).join('');const a=await api('/api/achievements');$('achievementGrid').innerHTML=a.items.map(x=>`<div class="ach ${x.done?'':'locked'}"><div class="ach-ico">${x.icon}</div><div class="ach-title">${x.title}</div><div class="ach-date">${x.done?'달성':'잠김'}</div></div>`).join('')}
+document.addEventListener('DOMContentLoaded',()=>{$('opDate').value=today();$('salesStart').value=today().slice(0,8)+'01';$('salesEnd').value=today();$('histStart').value=today().slice(0,8)+'01';$('histEnd').value=today();$('prevDay').onclick=()=>setDate(addDays($('opDate').value,-1));$('nextDay').onclick=()=>setDate(addDays($('opDate').value,1));$('todayBtn').onclick=()=>setDate(today());$('opDate').onchange=()=>loadDay();$('scanAllBtn').onclick=scanAll;$('financeUnlockBtn').onclick=financeUnlock;$('addClientBtn').onclick=()=>openClient('');$('closeClientModal').onclick=()=>$('clientModal').classList.add('hidden');$('saveClientBtn').onclick=saveClient;$('addExpenseBtn').onclick=async()=>{await needFinance();APP.editingExpense=null;$('expenseForm').classList.remove('hidden');$('exDate').value=today()};$('saveExpenseBtn').onclick=saveExpense;$('cancelExpenseBtn').onclick=()=>$('expenseForm').classList.add('hidden');$('addPaymentBtn').onclick=async()=>{await needFinance();APP.editingPayment=null;$('paymentForm').classList.remove('hidden');$('payDate').value=today()};$('savePaymentBtn').onclick=savePayment;$('cancelPaymentBtn').onclick=()=>$('paymentForm').classList.add('hidden');$('salesQueryBtn').onclick=loadFinance;$('histQueryBtn').onclick=loadHistory;document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',async()=>{if(['sales','expenses','tax','profit'].includes(b.dataset.page)){try{await needFinance();if(b.dataset.page!=='tax')await loadFinance()}catch(e){}}if(b.dataset.page==='history')loadHistory()}));financeMask();loadClients().then(loadDay);});</script>
+
+</body>
+</html>

@@ -1,0 +1,2 @@
+const {db,json,hash,sign}=require('./_lib');
+module.exports=async(req,res)=>{if(req.method!=='POST')return json(res,405,{error:'POST only'});try{const s=db(),b=req.body||{};const {data,error}=await s.from('settings').select('value').eq('key','finance_password_hash').single();if(error)throw error;if(hash(b.password)!==data.value)return json(res,401,{error:'비밀번호가 맞지 않습니다.'});json(res,200,{token:sign({finance:true,exp:Date.now()+12*60*60*1000})})}catch(e){json(res,500,{error:e.message})}};

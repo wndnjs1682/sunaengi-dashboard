@@ -1,0 +1,2 @@
+const {db,json,hash,requireFinance}=require('./_lib');
+module.exports=async(req,res)=>{if(req.method!=='POST')return json(res,405,{error:'POST only'});if(!requireFinance(req,res))return;try{const b=req.body||{};if(String(b.new_password||'').length<4)return json(res,400,{error:'4자리 이상 입력'});const s=db();const {error}=await s.from('settings').upsert({key:'finance_password_hash',value:hash(b.new_password)});if(error)throw error;json(res,200,{ok:true})}catch(e){json(res,500,{error:e.message})}};
