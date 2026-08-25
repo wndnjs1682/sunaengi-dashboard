@@ -412,7 +412,7 @@ td:first-child,th:first-child{text-align:left}
     <div class="card"><div class="k">기간 총매출</div><div class="v" id="fSales">-</div></div>
     <div class="card"><div class="k">유료 판매</div><div class="v" id="fPaid">-</div></div>
     <div class="card"><div class="k">입금액</div><div class="v" id="fIncome">-</div></div>
-    <div class="card"><div class="k">총 미수</div><div class="v" id="fDue">-</div></div>
+    <div class="card"><div class="k">선택기간 미수</div><div class="v" id="fDue">-</div></div>
     <div class="card"><div class="k">서비스</div><div class="v" id="fService">-</div></div>
   </div>
 
@@ -440,7 +440,7 @@ td:first-child,th:first-child{text-align:left}
     <div class="section-title">
       <div>
         <b>💸 거래처별 미수금</b>
-        <div class="small">거래처를 누르면 날짜별 납품·유료수량·금액·남은 미수를 확인</div>
+        <div class="small" id="dueRangeLabel">선택 기간의 미수 거래처만 표시 · 거래처를 누르면 상세 내역 펼침</div>
       </div>
       <span id="dueTotal" class="badge b-red">0원</span>
     </div>
@@ -2841,7 +2841,11 @@ function populatePaymentClients(){
   }
 }
 
-function renderDueClientGroups(outstanding,orders){
+function renderDueClientGroups(
+  visibleOutstanding,
+  orders,
+  allOutstanding
+){
   const root=$('dueClientGroups');
   if(!root) return;
 
@@ -2851,30 +2855,39 @@ function renderDueClientGroups(outstanding,orders){
     orderMap[`${o.client_id}|${o.order_date}`]=o;
   }
 
+  const allTotals={};
+
+  for(const x of (allOutstanding||[])){
+    const id=String(x.client_id);
+    allTotals[id]=(allTotals[id]||0)+(Number(x.due)||0);
+  }
+
   const groups={};
 
-  for(const x of (outstanding||[])){
+  for(const x of (visibleOutstanding||[])){
     const id=String(x.client_id);
 
     if(!groups[id]){
       groups[id]={
         client_id:id,
         name:clientNameById(id),
-        total:0,
+        periodTotal:0,
+        allTotal:allTotals[id]||0,
         items:[]
       };
     }
 
-    groups[id].total+=(Number(x.due)||0);
+    groups[id].periodTotal+=(Number(x.due)||0);
     groups[id].items.push(x);
   }
 
   const list=Object.values(groups)
-    .filter(g=>g.total>0)
-    .sort((a,b)=>b.total-a.total);
+    .filter(g=>g.periodTotal>0)
+    .sort((a,b)=>b.periodTotal-a.periodTotal);
 
   if(!list.length){
-    root.innerHTML='<div class="small" style="padding:12px">현재 미수금이 없습니다.</div>';
+    root.innerHTML=
+      '<div class="small" style="padding:14px">선택한 기간에 발생한 미수금이 없습니다.</div>';
     return;
   }
 
@@ -2883,18 +2896,30 @@ function renderDueClientGroups(outstanding,orders){
       .sort((a,b)=>String(a.order_date).localeCompare(String(b.order_date)))
       .map(x=>{
         const o=orderMap[`${x.client_id}|${x.order_date}`]||{};
+
         const paid=Number(o.paid)||0;
         const service=Number(o.service)||0;
-        const prepared=Number(o.prepared)||paid+service;
-        const amount=Number(o.total_amount ?? o.supply_amount)||0;
+        const prepared=
+          Number(o.prepared)
+          ||
+          (paid+service);
+
+        const amount=
+          Number(
+            o.total_amount
+            ??
+            o.supply_amount
+            ??
+            0
+          )||0;
 
         return `
           <div
             style="
               display:grid;
-              grid-template-columns:110px 90px 90px 120px 120px;
+              grid-template-columns:105px 95px 85px 85px 120px 125px;
               gap:8px;
-              padding:8px 4px;
+              padding:9px 4px;
               border-bottom:1px solid var(--line);
               align-items:center;
             "
@@ -2902,6 +2927,7 @@ function renderDueClientGroups(outstanding,orders){
             <span>${x.order_date}</span>
             <span>도시락 ${prepared}개</span>
             <span>유료 ${paid}개</span>
+            <span>서비스 ${service}개</span>
             <b>${won(amount)}</b>
             <b style="color:#b91c1c">미수 ${won(x.due)}</b>
           </div>
@@ -2910,12 +2936,19 @@ function renderDueClientGroups(outstanding,orders){
       .join('');
 
     return `
-      <details class="card" style="padding:0;overflow:hidden">
+      <details
+        class="card"
+        style="
+          padding:0;
+          overflow:hidden;
+          border:1px solid var(--line);
+        "
+      >
         <summary
           style="
             cursor:pointer;
             list-style:none;
-            padding:13px;
+            padding:14px;
             display:flex;
             justify-content:space-between;
             align-items:center;
@@ -2923,38 +2956,71 @@ function renderDueClientGroups(outstanding,orders){
           "
         >
           <div>
-            <b style="font-size:16px">${escapeHtml(g.name)}</b>
-            <div class="small">${g.items.length}건 미수</div>
+            <b style="font-size:17px">
+              ${escapeHtml(g.name)}
+            </b>
+
+            <div class="small" style="margin-top:3px">
+              선택기간 ${g.items.length}건 ·
+              전체 현재 미수 ${won(g.allTotal)}
+            </div>
           </div>
 
-          <span class="badge b-red" style="font-size:12px">
-            총 미수 ${won(g.total)}
+          <span
+            class="badge b-red"
+            style="font-size:12px;padding:6px 10px"
+          >
+            기간 미수 ${won(g.periodTotal)}
           </span>
         </summary>
 
-        <div style="padding:0 13px 13px">
+        <div style="padding:0 14px 14px">
+
+          <div
+            class="notice"
+            style="margin-bottom:8px"
+          >
+            💡 입금 등록 시 이 거래처의 가장 오래된 미수부터 자동 상계됩니다.
+          </div>
+
           <div
             class="small"
             style="
               display:grid;
-              grid-template-columns:110px 90px 90px 120px 120px;
+              grid-template-columns:105px 95px 85px 85px 120px 125px;
               gap:8px;
-              padding:7px 4px;
+              padding:8px 4px;
               background:#f8fafc;
-              font-weight:800;
+              font-weight:850;
             "
           >
             <span>납품일</span>
             <span>총수량</span>
             <span>유료</span>
+            <span>서비스</span>
             <span>매출</span>
             <span>남은 미수</span>
           </div>
+
           ${rows}
         </div>
       </details>
     `;
   }).join('');
+}
+
+function outstandingInRange(items,start,end){
+  return (items||[]).filter(x=>{
+    const d=String(x.order_date||'');
+    return d && d>=start && d<=end && (Number(x.due)||0)>0;
+  });
+}
+
+function outstandingTotal(items){
+  return (items||[]).reduce(
+    (sum,x)=>sum+(Number(x.due)||0),
+    0
+  );
 }
 
 async function loadOutstandingOrderDetails(outstanding){
@@ -3004,30 +3070,56 @@ async function loadFinance(){
   $('fIncome').textContent=
     won(f.income);
 
-  $('fDue').textContent=
-    won(f.receivable);
-
   $('fService').textContent=
     f.service+'개';
 
-  $('dueTotal').textContent=
-    won(f.receivable);
-
+  /*
+    finance API의 outstanding은 전체 현재 미수일 수 있으므로
+    화면의 선택기간 미수는 order_date 기준으로 다시 필터링한다.
+  */
   APP.financeOutstanding=
     Array.isArray(f.outstanding)
       ?f.outstanding
       :[];
 
+  const visibleOutstanding=
+    outstandingInRange(
+      APP.financeOutstanding,
+      start,
+      end
+    );
+
+  const visibleDue=
+    outstandingTotal(
+      visibleOutstanding
+    );
+
+  $('fDue').textContent=
+    won(visibleDue);
+
+  $('dueTotal').textContent=
+    won(visibleDue);
+
+  if($('dueRangeLabel')){
+    $('dueRangeLabel').textContent=
+      `${start} ~ ${end} · 해당 기간의 미수 거래처만 표시 · 거래처를 누르면 상세 내역 펼침`;
+  }
+
   APP.financeOrders=
     await loadOutstandingOrderDetails(
-      APP.financeOutstanding
+      visibleOutstanding
     );
 
   renderDueClientGroups(
-    APP.financeOutstanding,
-    APP.financeOrders
+    visibleOutstanding,
+    APP.financeOrders,
+    APP.financeOutstanding
   );
 
+  /*
+    입금등록 거래처는 기간과 무관하게
+    현재 미수가 남은 거래처 전체를 보여준다.
+  */
   populatePaymentClients();
 
   const pc=[
