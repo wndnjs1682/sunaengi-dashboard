@@ -1380,6 +1380,15 @@ function financeMask(){
 }
 
 
+function escapeHtml(value){
+  return String(value??'')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+
 function workspaceKey(kind,date){
   return `sunaengi:${kind}:${date}`;
 }
@@ -1448,7 +1457,7 @@ function renderDailyTasks(){
       <label style="display:flex;align-items:center;gap:9px;flex:1;cursor:pointer">
         <input type="checkbox" data-task-id="${t.id}" ${t.done?'checked':''}>
         <span style="${t.done?'text-decoration:line-through;opacity:.55':''}">
-          ${esc(t.title)}
+          ${escapeHtml(t.title)}
         </span>
       </label>
       <button class="task-delete" data-task-id="${t.id}" title="삭제" style="padding:4px 8px">×</button>
