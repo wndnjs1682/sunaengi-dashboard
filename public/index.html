@@ -388,11 +388,11 @@ td:first-child,th:first-child{text-align:left}
     </div>
 
     <div class="rangebar">
-      <button class="preset sales-preset" data-range="today">오늘</button>
-      <button class="preset sales-preset" data-range="week">이번주</button>
-      <button class="preset sales-preset" data-range="nextweek">다음주</button>
-      <button class="preset sales-preset on" data-range="month">이번달</button>
-      <button class="preset sales-preset" data-range="custom">직접기간</button>
+      <button class="preset sales-preset" data-range="today" onclick="salesRangeClick('today',this)">오늘</button>
+      <button class="preset sales-preset" data-range="week" onclick="salesRangeClick('week',this)">이번주</button>
+      <button class="preset sales-preset" data-range="nextweek" onclick="salesRangeClick('nextweek',this)">다음주</button>
+      <button class="preset sales-preset on" data-range="month" onclick="salesRangeClick('month',this)">이번달</button>
+      <button class="preset sales-preset" data-range="custom" onclick="salesRangeClick('custom',this)">직접기간</button>
 
       <label>
         시작일<br>
@@ -424,7 +424,7 @@ td:first-child,th:first-child{text-align:left}
 
     <div class="expense-extra">
       <label>입금일<br><input id="payDate" type="date"></label>
-      <label>거래처<br><select id="payClient"></select></label>
+      <label>거래처<br><select id="payClient" style="min-width:220px;width:100%"></select></label>
       <label>입금액<br><input id="payAmount"></label>
       <label>메모<br><input id="payMemo"></label>
 
@@ -438,22 +438,14 @@ td:first-child,th:first-child{text-align:left}
 
   <div class="section card">
     <div class="section-title">
-      <b>💸 미수금</b>
+      <div>
+        <b>💸 거래처별 미수금</b>
+        <div class="small">거래처를 누르면 날짜별 납품·유료수량·금액·남은 미수를 확인</div>
+      </div>
       <span id="dueTotal" class="badge b-red">0원</span>
     </div>
 
-    <div class="scroll">
-      <table>
-        <thead>
-          <tr>
-            <th>거래처</th>
-            <th>납품일</th>
-            <th>미수금</th>
-          </tr>
-        </thead>
-        <tbody id="dueRows"></tbody>
-      </table>
-    </div>
+    <div id="dueClientGroups" class="list" style="margin-top:10px"></div>
   </div>
 
   <div class="section card">
@@ -1293,7 +1285,9 @@ let APP={
   date:'',
   editingClient:null,
   editingExpense:null,
-  editingPayment:null
+  editingPayment:null,
+  financeOutstanding:[],
+  financeOrders:[]
 };
 
 async function api(url,opt={}){
@@ -2316,38 +2310,6 @@ function renderClients(){
       `)
       .join('');
 
-  const payClient=$('payClient');
-
-  if(payClient){
-    const current=payClient.value;
-
-    const activeClients=
-      APP.clients
-        .filter(c=>c.active!==false)
-        .sort((a,b)=>
-          (Number(a.sort_order)||9999)
-          -
-          (Number(b.sort_order)||9999)
-        );
-
-    payClient.innerHTML=
-      '<option value="">거래처 선택</option>'
-      +
-      activeClients
-        .map(c=>
-          `<option value="${c.id}">${escapeHtml(c.name)}</option>`
-        )
-        .join('');
-
-    if(
-      current
-      &&
-      activeClients.some(c=>String(c.id)===String(current))
-    ){
-      payClient.value=current;
-    }
-  }
-
   bindDrag();
 }
 
@@ -2812,6 +2774,212 @@ async function loadProfit(){
   }
 }
 
+
+async function salesRangeClick(mode,button){
+  document
+    .querySelectorAll('.sales-preset')
+    .forEach(x=>x.classList.remove('on'));
+
+  button?.classList.add('on');
+
+  if(mode==='custom'){
+    $('salesStart').focus();
+    return;
+  }
+
+  const base=today();
+  const r=rangeFor(mode,base);
+
+  if(!r){
+    return;
+  }
+
+  $('salesStart').value=r.start;
+  $('salesEnd').value=r.end;
+
+  try{
+    await loadFinance();
+  }catch(e){
+    alert('조회 실패: '+e.message);
+  }
+}
+
+function clientNameById(id){
+  return APP.clients.find(c=>String(c.id)===String(id))?.name || id;
+}
+
+function populatePaymentClients(){
+  const select=$('payClient');
+  if(!select) return;
+
+  const totals={};
+
+  for(const x of (APP.financeOutstanding||[])){
+    const id=String(x.client_id);
+    totals[id]=(totals[id]||0)+(Number(x.due)||0);
+  }
+
+  const ids=Object.keys(totals)
+    .filter(id=>totals[id]>0)
+    .sort((a,b)=>{
+      const ca=APP.clients.find(c=>String(c.id)===a);
+      const cb=APP.clients.find(c=>String(c.id)===b);
+      return (Number(ca?.sort_order)||9999)-(Number(cb?.sort_order)||9999);
+    });
+
+  const current=select.value;
+
+  select.innerHTML=
+    '<option value="">거래처 선택</option>'
+    +
+    ids.map(id=>
+      `<option value="${id}">${escapeHtml(clientNameById(id))} · 미수 ${won(totals[id])}</option>`
+    ).join('');
+
+  if(current && ids.includes(String(current))){
+    select.value=current;
+  }
+}
+
+function renderDueClientGroups(outstanding,orders){
+  const root=$('dueClientGroups');
+  if(!root) return;
+
+  const orderMap={};
+
+  for(const o of (orders||[])){
+    orderMap[`${o.client_id}|${o.order_date}`]=o;
+  }
+
+  const groups={};
+
+  for(const x of (outstanding||[])){
+    const id=String(x.client_id);
+
+    if(!groups[id]){
+      groups[id]={
+        client_id:id,
+        name:clientNameById(id),
+        total:0,
+        items:[]
+      };
+    }
+
+    groups[id].total+=(Number(x.due)||0);
+    groups[id].items.push(x);
+  }
+
+  const list=Object.values(groups)
+    .filter(g=>g.total>0)
+    .sort((a,b)=>b.total-a.total);
+
+  if(!list.length){
+    root.innerHTML='<div class="small" style="padding:12px">현재 미수금이 없습니다.</div>';
+    return;
+  }
+
+  root.innerHTML=list.map(g=>{
+    const rows=g.items
+      .sort((a,b)=>String(a.order_date).localeCompare(String(b.order_date)))
+      .map(x=>{
+        const o=orderMap[`${x.client_id}|${x.order_date}`]||{};
+        const paid=Number(o.paid)||0;
+        const service=Number(o.service)||0;
+        const prepared=Number(o.prepared)||paid+service;
+        const amount=Number(o.total_amount ?? o.supply_amount)||0;
+
+        return `
+          <div
+            style="
+              display:grid;
+              grid-template-columns:110px 90px 90px 120px 120px;
+              gap:8px;
+              padding:8px 4px;
+              border-bottom:1px solid var(--line);
+              align-items:center;
+            "
+          >
+            <span>${x.order_date}</span>
+            <span>도시락 ${prepared}개</span>
+            <span>유료 ${paid}개</span>
+            <b>${won(amount)}</b>
+            <b style="color:#b91c1c">미수 ${won(x.due)}</b>
+          </div>
+        `;
+      })
+      .join('');
+
+    return `
+      <details class="card" style="padding:0;overflow:hidden">
+        <summary
+          style="
+            cursor:pointer;
+            list-style:none;
+            padding:13px;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            gap:12px;
+          "
+        >
+          <div>
+            <b style="font-size:16px">${escapeHtml(g.name)}</b>
+            <div class="small">${g.items.length}건 미수</div>
+          </div>
+
+          <span class="badge b-red" style="font-size:12px">
+            총 미수 ${won(g.total)}
+          </span>
+        </summary>
+
+        <div style="padding:0 13px 13px">
+          <div
+            class="small"
+            style="
+              display:grid;
+              grid-template-columns:110px 90px 90px 120px 120px;
+              gap:8px;
+              padding:7px 4px;
+              background:#f8fafc;
+              font-weight:800;
+            "
+          >
+            <span>납품일</span>
+            <span>총수량</span>
+            <span>유료</span>
+            <span>매출</span>
+            <span>남은 미수</span>
+          </div>
+          ${rows}
+        </div>
+      </details>
+    `;
+  }).join('');
+}
+
+async function loadOutstandingOrderDetails(outstanding){
+  const dates=(outstanding||[])
+    .map(x=>x.order_date)
+    .filter(Boolean)
+    .sort();
+
+  if(!dates.length){
+    return [];
+  }
+
+  try{
+    const h=await api(
+      `/api/history?start=${dates[0]}&end=${dates[dates.length-1]}`
+    );
+
+    return Array.isArray(h.orders)
+      ?h.orders
+      :[];
+  }catch(e){
+    return [];
+  }
+}
+
 async function loadFinance(){
 
   await needFinance();
@@ -2845,30 +3013,22 @@ async function loadFinance(){
   $('dueTotal').textContent=
     won(f.receivable);
 
-  $('dueRows').innerHTML=
-    f.outstanding
-      .map(x=>`
-        <tr>
-          <td>
-            ${
-              APP.clients
-                .find(c=>c.id===x.client_id)
-                ?.name
-              ||
-              x.client_id
-            }
-          </td>
+  APP.financeOutstanding=
+    Array.isArray(f.outstanding)
+      ?f.outstanding
+      :[];
 
-          <td>
-            ${x.order_date}
-          </td>
+  APP.financeOrders=
+    await loadOutstandingOrderDetails(
+      APP.financeOutstanding
+    );
 
-          <td>
-            ${won(x.due)}
-          </td>
-        </tr>
-      `)
-      .join('');
+  renderDueClientGroups(
+    APP.financeOutstanding,
+    APP.financeOrders
+  );
+
+  populatePaymentClients();
 
   const pc=[
     ...document.querySelectorAll(
@@ -3448,6 +3608,14 @@ document.addEventListener(
           await loadClients();
         }
 
+        if(!APP.financeOutstanding.length){
+          try{
+            await loadFinance();
+          }catch(e){}
+        }
+
+        populatePaymentClients();
+
         APP.editingPayment=
           null;
 
@@ -3478,16 +3646,6 @@ document.addEventListener(
 
     $('salesQueryBtn').onclick=
       loadFinance;
-
-    document
-      .querySelectorAll('.sales-preset')
-      .forEach(btn=>{
-        btn.onclick=
-          ()=>applySalesRange(
-            btn.dataset.range,
-            btn
-          );
-      });
 
     if($('profitQueryBtn')){
       $('profitQueryBtn').onclick=
