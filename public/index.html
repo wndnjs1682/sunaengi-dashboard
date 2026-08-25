@@ -388,10 +388,11 @@ td:first-child,th:first-child{text-align:left}
     </div>
 
     <div class="rangebar">
-      <button class="preset" data-range="today">오늘</button>
-      <button class="preset" data-range="week">이번주</button>
-      <button class="preset on" data-range="month">이번달</button>
-      <button class="preset" data-range="custom">직접기간</button>
+      <button class="preset sales-preset" data-range="today">오늘</button>
+      <button class="preset sales-preset" data-range="week">이번주</button>
+      <button class="preset sales-preset" data-range="nextweek">다음주</button>
+      <button class="preset sales-preset on" data-range="month">이번달</button>
+      <button class="preset sales-preset" data-range="custom">직접기간</button>
 
       <label>
         시작일<br>
@@ -2315,6 +2316,38 @@ function renderClients(){
       `)
       .join('');
 
+  const payClient=$('payClient');
+
+  if(payClient){
+    const current=payClient.value;
+
+    const activeClients=
+      APP.clients
+        .filter(c=>c.active!==false)
+        .sort((a,b)=>
+          (Number(a.sort_order)||9999)
+          -
+          (Number(b.sort_order)||9999)
+        );
+
+    payClient.innerHTML=
+      '<option value="">거래처 선택</option>'
+      +
+      activeClients
+        .map(c=>
+          `<option value="${c.id}">${escapeHtml(c.name)}</option>`
+        )
+        .join('');
+
+    if(
+      current
+      &&
+      activeClients.some(c=>String(c.id)===String(current))
+    ){
+      payClient.value=current;
+    }
+  }
+
   bindDrag();
 }
 
@@ -2584,6 +2617,22 @@ function rangeFor(mode,baseDate=today()){
     const s=new Date(base);
     s.setDate(base.getDate()-diff);
     return {start:isoDateLocal(s),end:isoDateLocal(base)};
+  }
+
+  if(mode==='nextweek'){
+    const day=base.getDay();
+    const diff=(day===0?6:day-1);
+
+    const s=new Date(base);
+    s.setDate(base.getDate()-diff+7);
+
+    const e=new Date(s);
+    e.setDate(s.getDate()+6);
+
+    return {
+      start:isoDateLocal(s),
+      end:isoDateLocal(e)
+    };
   }
 
   if(mode==='month'){
@@ -2952,6 +3001,18 @@ function editPayment(raw){
 async function savePayment(){
 
   await needFinance();
+
+  if(!$('payClient').value){
+    alert('거래처를 선택해주세요.');
+    $('payClient').focus();
+    return;
+  }
+
+  if(!(Number($('payAmount').value)>0)){
+    alert('입금액을 입력해주세요.');
+    $('payAmount').focus();
+    return;
+  }
 
   await api(
     '/api/payment',
@@ -3383,6 +3444,10 @@ document.addEventListener(
 
         await needFinance();
 
+        if(!APP.clients.length){
+          await loadClients();
+        }
+
         APP.editingPayment=
           null;
 
@@ -3392,6 +3457,14 @@ document.addEventListener(
 
         $('payDate').value=
           today();
+
+        $('payClient').value='';
+        $('payAmount').value='';
+        $('payMemo').value='';
+
+        if($('payClient').options.length<=1){
+          alert('입금 등록에 사용할 거래처가 없습니다. 거래처 관리에서 거래중 거래처를 확인해주세요.');
+        }
       };
 
     $('savePaymentBtn').onclick=
