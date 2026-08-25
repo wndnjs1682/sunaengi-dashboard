@@ -1539,11 +1539,36 @@ function nameLink(r){
   const label=
     `${r.name}${r.affiliation?' ('+r.affiliation+')':''}`;
 
-  return r.reservation_url
+  /*
+    1순위: 거래처 관리에서 직접 저장한 예약페이지 URL
+    2순위: 선상24 자동조회 그룹 URL
+    더피싱 등은 reservation_url을 저장하면 그 주소가 우선 사용됨
+  */
+  const sunsangUrls={
+    gagaho:'https://gagaho.sunsang24.com/ship/schedule_fleet/',
+    bj:'https://bj.sunsang24.com/ship/schedule_fleet/',
+    hongdan:'https://hongdanfishing.sunsang24.com/ship/schedule_fleet/',
+    taeguk:'https://taegeukho.sunsang24.com/ship/schedule_fleet/',
+    blackeagles:'https://blackeagles.sunsang24.com/ship/schedule_fleet/',
+    redman:'https://redman.sunsang24.com/ship/schedule_fleet/',
+    taebaek:'https://taebaekho.sunsang24.com/ship/schedule_fleet/',
+    yeomyeong:'https://yeomyeongho.sunsang24.com/ship/schedule_fleet/'
+  };
+
+  const autoUrl=
+    r.source==='선상24'
+      ?sunsangUrls[r.sunsang_group]
+      :null;
+
+  const url=
+    r.reservation_url||autoUrl;
+
+  return url
     ?`<a
         class="linkname"
-        href="${r.reservation_url}"
+        href="${url}"
         target="_blank"
+        rel="noopener noreferrer"
       >${label}</a>`
     :label;
 }
