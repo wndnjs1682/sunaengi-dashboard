@@ -38,29 +38,10 @@ function esc(s){
   return String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 }
 
-
-/*
- * ★ 중요
- *
- * 선상24의 "진짜 날짜 제목"만 찾는다.
- *
- * 정상 일정 제목 예:
- * 9 월 1 일(화) | 11물 |
- *
- * 공지문 안의:
- * 9월1일 ~ 9월20일
- *
- * 같은 문구는 날짜 제목으로 인정하지 않는다.
- */
 function findDateHeading(text,month,day,fromIndex=0){
-
   const m=String(Number(month));
   const d=String(Number(day));
 
-  /*
-   * 가장 신뢰도가 높은 형태:
-   * 줄 시작 + 월/일 + 요일 괄호
-   */
   const strong=new RegExp(
     `(?:^|\\n)\\s*${m}\\s*월\\s*${d}\\s*일\\s*\\([^)\\n]{1,6}\\)`,
     'g'
@@ -74,13 +55,6 @@ function findDateHeading(text,month,day,fromIndex=0){
     return hit;
   }
 
-
-  /*
-   * 혹시 선상24가 요일 표시를 없애더라도
-   * 줄 시작에 있는 날짜만 허용한다.
-   *
-   * "~"로 이어지는 공지 날짜는 제외.
-   */
   const fallback=new RegExp(
     `(?:^|\\n)\\s*${m}\\s*월\\s*${d}\\s*일(?!\\s*~)`,
     'g'
@@ -91,18 +65,8 @@ function findDateHeading(text,month,day,fromIndex=0){
   return fallback.exec(text);
 }
 
-
-/*
- * 현재 날짜 일정만 잘라낸다.
- */
 function daySlice(text,month,day){
-
-  const hit=findDateHeading(
-    text,
-    month,
-    day,
-    0
-  );
+  const hit=findDateHeading(text,month,day,0);
 
   if(!hit){
     return null;
@@ -110,62 +74,35 @@ function daySlice(text,month,day){
 
   const start=hit.index;
 
-  /*
-   * 다음 "진짜 일정 날짜"를 찾는다.
-   * 공지 속 9월1일, 9월20일 등은 무시.
-   */
   const nextStrong=
     /(?:^|\n)\s*\d{1,2}\s*월\s*\d{1,2}\s*일\s*\([^) \n]{1,6}\)/gm;
 
-  nextStrong.lastIndex=
-    start+hit[0].length;
+  nextStrong.lastIndex=start+hit[0].length;
 
-  const next=
-    nextStrong.exec(text);
+  const next=nextStrong.exec(text);
 
   if(next){
-    return text.slice(
-      start,
-      next.index
-    );
+    return text.slice(start,next.index);
   }
 
-
-  /*
-   * 요일이 없는 사이트 대비 fallback
-   */
   const nextFallback=
     /(?:^|\n)\s*\d{1,2}\s*월\s*\d{1,2}\s*일(?!\s*~)/gm;
 
-  nextFallback.lastIndex=
-    start+hit[0].length;
+  nextFallback.lastIndex=start+hit[0].length;
 
-  const next2=
-    nextFallback.exec(text);
+  const next2=nextFallback.exec(text);
 
   return text.slice(
     start,
-    next2
-      ?next2.index
-      :text.length
+    next2 ? next2.index : text.length
   );
 }
 
-
-/*
- * 해당 날짜에서
- * 특정 선박의 영역만 분리한다.
- */
 function shipSegment(dayText,shipName,allNames){
-
   if(!shipName){
     return null;
   }
 
-  /*
-   * 실제 일정의 배 이름은
-   * 보통 독립된 줄에서 시작한다.
-   */
   const startRegex=new RegExp(
     `(?:^|\\n)\\s*${esc(shipName)}(?:\\s|\\n|$)`,
     'm'
@@ -173,13 +110,8 @@ function shipSegment(dayText,shipName,allNames){
 
   let hit=startRegex.exec(dayText);
 
-  /*
-   * 혹시 구조가 변하면 마지막 fallback
-   */
   if(!hit){
-
-    const pos=
-      dayText.indexOf(shipName);
+    const pos=dayText.indexOf(shipName);
 
     if(pos<0){
       return null;
@@ -192,21 +124,10 @@ function shipSegment(dayText,shipName,allNames){
   }
 
   const start=hit.index;
-
   let end=dayText.length;
 
-
-  /*
-   * 현재 배 이후에 실제로 등장하는
-   * 다음 선박 시작점을 찾는다.
-   */
   for(const name of allNames){
-
-    if(
-      !name
-      ||
-      name===shipName
-    ){
+    if(!name || name===shipName){
       continue;
     }
 
@@ -215,64 +136,41 @@ function shipSegment(dayText,shipName,allNames){
       'gm'
     );
 
-    re.lastIndex=
-      start+String(hit[0]||shipName).length;
+    re.lastIndex=start+String(hit[0]||shipName).length;
 
     const n=re.exec(dayText);
 
     if(
-      n
-      &&
-      n.index>start
-      &&
+      n &&
+      n.index>start &&
       n.index<end
     ){
       end=n.index;
     }
   }
 
-  return dayText.slice(
-    start,
-    end
-  );
+  return dayText.slice(start,end);
 }
 
-
-/*
- * 선상24 페이지 다운로드
- *
- * 그룹당 1회만 요청.
- * 특정 사이트가 느려도 5초 이상 붙잡지 않는다.
- */
 async function fetchHtml(url){
+  const controller=new AbortController();
 
-  const controller=
-    new AbortController();
-
-  const timer=
-    setTimeout(
-      ()=>controller.abort(),
-      5000
-    );
+  const timer=setTimeout(
+    ()=>controller.abort(),
+    5000
+  );
 
   try{
-
     const r=await fetch(
       url,
       {
         headers:{
           'user-agent':
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/123 Safari/537.36',
-
-          'accept-language':
-            'ko-KR,ko;q=0.9',
-
-          'accept':
-            'text/html,application/xhtml+xml'
+          'accept-language':'ko-KR,ko;q=0.9',
+          'accept':'text/html,application/xhtml+xml'
         },
-
         redirect:'follow',
-
         signal:controller.signal
       }
     );
@@ -284,7 +182,6 @@ async function fetchHtml(url){
     };
 
   }catch(e){
-
     return {
       ok:false,
       status:0,
@@ -296,14 +193,11 @@ async function fetchHtml(url){
     };
 
   }finally{
-
     clearTimeout(timer);
   }
 }
 
-
 const URLS={
-
   gagaho:ym=>
     `https://gagaho.sunsang24.com/ship/schedule_fleet/${ym}`,
 
@@ -329,9 +223,7 @@ const URLS={
     `https://yeomyeongho.sunsang24.com/ship/schedule_fleet/${ym}`
 };
 
-
 const ROSTERS={
-
   gagaho:[
     '가가호',
     '대한호',
@@ -383,33 +275,32 @@ const ROSTERS={
   ]
 };
 
+function firstUsefulWindow(seg){
+  /*
+   * 해당 선박 구간이 너무 길 경우
+   * 뒤쪽 공지/대기명단/다른 숫자를 주워오지 않도록
+   * 앞쪽 일정 정보 중심으로 제한한다.
+   */
+  return seg.slice(0,2500);
+}
 
-/*
- * 예약인원 판정
- *
- * 안전 원칙:
- * 틀린 숫자를 자동확정하는 것보다
- * 확인필요로 보내는 것을 우선한다.
- */
 function parseReservation(seg,guestMax){
-
   if(!seg){
-
     return {
       ok:false,
       message:'해당 날짜 일정 없음'
     };
   }
 
+  const head=firstUsefulWindow(seg);
 
   /*
-   * 출항 취소
+   * 1. 출항취소 최우선
    */
   if(
     /(?:^|\n)\s*(?:\*\s*)?(?:출항취소|결항|출항없음)\s*(?:\n|$)/mi
-      .test(seg)
+      .test(head)
   ){
-
     return {
       ok:true,
       cancelled:true,
@@ -418,148 +309,66 @@ function parseReservation(seg,guestMax){
     };
   }
 
-
   /*
-   * 남은자리
+   * 2. 예약마감 + 바로 근처 숫자
    *
-   * 예:
-   * 남은자리 17명
-   * 남은 자리 : 17명
-   * 남은자리
-   * 17명
-   */
-  const remainMatch=
-
-    /남은\s*자리[\s:：\/\-]*(\d{1,2})\s*명?/i
-      .exec(seg);
-
-
-  /*
-   * 예약 인원
-   *
-   * 예:
+   * 여명호 같은:
+   * 예약마감
+   * 21명
    * 예약/21명
-   * 예약 / 21명
-   * 예약:21명
-   * 예약인원 21명
+   *
+   * 구조를 가장 먼저 잡는다.
    */
-  const reservationMatch=
+  const closeMatch=
+    /예약\s*마감[\s\S]{0,80}?(\d{1,2})\s*명/i.exec(head);
 
-    /예약\s*(?:\/|:|：|-)?\s*(\d{1,2})\s*명/i
-      .exec(seg)
-
-    ||
-
-    /예약\s*인원[\s:：\/\-]*(\d{1,2})\s*명/i
-      .exec(seg);
-
-
-  /*
-   * 남은자리를 가장 우선해서 사용
-   */
-  if(remainMatch){
-
-    const remain=
-      Number(
-        remainMatch[1]
-      );
-
-    if(!Number.isFinite(guestMax)){
-
-      return {
-        ok:false,
-        message:
-          `남은자리 ${remain}명 · 손님최대 확인필요`
-      };
-    }
-
+  if(closeMatch){
+    const reservation=Number(closeMatch[1]);
 
     if(
-      remain<0
-      ||
-      remain>guestMax
-    ){
-
-      return {
-        ok:false,
-        message:
-          `남은자리 이상값 ${remain}/${guestMax}`
-      };
-    }
-
-
-    const calculated=
-      guestMax-remain;
-
-
-    /*
-     * 페이지에 예약 숫자도 같이 있으면
-     * 서로 맞는지 검증한다.
-     */
-    if(reservationMatch){
-
-      const shown=
-        Number(
-          reservationMatch[1]
-        );
-
-      if(
-        shown<0
-        ||
-        shown>guestMax
-      ){
-
-        return {
-          ok:false,
-          message:
-            `예약인원 이상값 ${shown}/${guestMax}`
-        };
-      }
-
-
-      if(shown!==calculated){
-
-        return {
-          ok:false,
-          message:
-            `숫자 불일치 · 남은 ${remain} → 예약 ${calculated}, 페이지 예약 ${shown}`
-        };
-      }
-    }
-
-
-    return {
-      ok:true,
-      reservation:calculated,
-      remaining:remain,
-      message:
-        `남은자리 ${remain}명 → 예약 ${calculated}명`
-    };
-  }
-
-
-  /*
-   * 예약/21명처럼
-   * 예약인원만 표시된 경우
-   */
-  if(reservationMatch){
-
-    const reservation=
-      Number(
-        reservationMatch[1]
-      );
-
-
-    if(
-      Number.isFinite(guestMax)
-      &&
+      Number.isFinite(guestMax) &&
       (
-        reservation<0
-        ||
+        reservation<0 ||
         reservation>guestMax
       )
     ){
+      return {
+        ok:false,
+        message:
+          `예약마감 숫자 이상값 ${reservation}/${guestMax}`
+      };
+    }
 
+    return {
+      ok:true,
+      reservation,
+      remaining:
+        Number.isFinite(guestMax)
+          ?Math.max(0,guestMax-reservation)
+          :null,
+      message:
+        `예약마감 ${reservation}명`
+    };
+  }
+
+  /*
+   * 3. 명확한 예약/숫자
+   */
+  const reservationMatch=
+    /예약\s*\/\s*(\d{1,2})\s*명/i.exec(head)
+    ||
+    /예약\s*(?:인원)?\s*[:：]\s*(\d{1,2})\s*명/i.exec(head);
+
+  if(reservationMatch){
+    const reservation=Number(reservationMatch[1]);
+
+    if(
+      Number.isFinite(guestMax) &&
+      (
+        reservation<0 ||
+        reservation>guestMax
+      )
+    ){
       return {
         ok:false,
         message:
@@ -567,28 +376,65 @@ function parseReservation(seg,guestMax){
       };
     }
 
-
     return {
       ok:true,
       reservation,
+      remaining:
+        Number.isFinite(guestMax)
+          ?Math.max(0,guestMax-reservation)
+          :null,
       message:
         `예약/${reservation}명`
     };
   }
 
+  /*
+   * 4. 남은자리
+   *
+   * 아무 데서나 찾지 않고
+   * 선박 일정 앞쪽 제한 구간 안에서만 찾는다.
+   */
+  const remainMatch=
+    /남은\s*자리[\s:：\/\-]*(\d{1,2})\s*명?/i.exec(head);
+
+  if(remainMatch){
+    const remain=Number(remainMatch[1]);
+
+    if(!Number.isFinite(guestMax)){
+      return {
+        ok:false,
+        message:
+          `남은자리 ${remain}명 · 손님최대 확인필요`
+      };
+    }
+
+    if(
+      remain<0 ||
+      remain>guestMax
+    ){
+      return {
+        ok:false,
+        message:
+          `남은자리 이상값 ${remain}/${guestMax}`
+      };
+    }
+
+    const reservation=guestMax-remain;
+
+    return {
+      ok:true,
+      reservation,
+      remaining:remain,
+      message:
+        `남은자리 ${remain}명 → 예약 ${reservation}명`
+    };
+  }
 
   /*
-   * 예약마감 표시가 있는데
-   * 예약/숫자를 못 찾은 경우
-   *
-   * 손님최대가 확실하면 만석으로 판정
+   * 5. 예약마감 글자만 있고 숫자를 못 읽은 경우
    */
-  if(
-    /예약\s*마감/i.test(seg)
-  ){
-
+  if(/예약\s*마감/i.test(head)){
     if(Number.isFinite(guestMax)){
-
       return {
         ok:true,
         reservation:guestMax,
@@ -598,7 +444,6 @@ function parseReservation(seg,guestMax){
       };
     }
 
-
     return {
       ok:false,
       message:
@@ -606,57 +451,40 @@ function parseReservation(seg,guestMax){
     };
   }
 
-
   return {
     ok:false,
     message:'예약/남은자리 숫자 미검출'
   };
 }
 
-
 async function collectGroup(group,date,ships){
-
-  const [y,m,d]=
-    date.split('-');
-
+  const [y,m,d]=date.split('-');
 
   if(!URLS[group]){
-
     return Object.fromEntries(
       ships.map(
         s=>[
           s.id,
           {
             ok:false,
-            message:
-              `선상24 그룹 미등록: ${group}`
+            message:`선상24 그룹 미등록: ${group}`
           }
         ]
       )
     );
   }
 
-
-  const ym=
-    y+m;
-
-  const url=
-    URLS[group](ym);
-
+  const ym=y+m;
+  const url=URLS[group](ym);
 
   /*
-   * 그룹당 페이지 요청 딱 1번
+   * 그룹당 네트워크 요청은 여전히 1번
    */
-  const f=
-    await fetchHtml(url);
-
+  const f=await fetchHtml(url);
 
   if(!f.ok){
-
     const msg=
-      f.error
-      ||
-      `HTTP ${f.status}`;
+      f.error || `HTTP ${f.status}`;
 
     return Object.fromEntries(
       ships.map(
@@ -671,41 +499,27 @@ async function collectGroup(group,date,ships){
     );
   }
 
+  const text=strip(f.html);
 
-  const text=
-    strip(f.html);
-
-
-  /*
-   * ★ 이번 수정의 핵심
-   *
-   * 공지 안의 "9월1일 ~ 9월20일"이 아니라
-   * 실제 일정 날짜 제목만 기준으로 자른다.
-   */
-  const day=
-    daySlice(
-      text,
-      m,
-      d
-    );
-
+  const day=daySlice(
+    text,
+    m,
+    d
+  );
 
   if(!day){
-
     return Object.fromEntries(
       ships.map(
         s=>[
           s.id,
           {
             ok:false,
-            message:
-              '선택 날짜 일정 없음'
+            message:'선택 날짜 일정 없음'
           }
         ]
       )
     );
   }
-
 
   const roster=
     ROSTERS[group]
@@ -714,55 +528,35 @@ async function collectGroup(group,date,ships){
       s=>s.ship_name||s.name
     );
 
-
   const out={};
 
-
   for(const s of ships){
-
-    /*
-     * DB에서 ship_name이 있으면 우선,
-     * 없으면 거래처 name 사용
-     */
     const shipName=
-      s.ship_name
-      ||
-      s.name;
+      s.ship_name || s.name;
 
-
-    const seg=
-      shipSegment(
-        day,
-        shipName,
-        roster
-      );
-
+    const seg=shipSegment(
+      day,
+      shipName,
+      roster
+    );
 
     if(!seg){
-
       out[s.id]={
         ok:false,
-        message:
-          '해당 날짜 선박 일정 없음'
+        message:'해당 날짜 선박 일정 없음'
       };
 
       continue;
     }
 
-
-    out[s.id]=
-      parseReservation(
-        seg,
-        Number(
-          s.guest_max
-        )
-      );
+    out[s.id]=parseReservation(
+      seg,
+      Number(s.guest_max)
+    );
   }
-
 
   return out;
 }
-
 
 module.exports={
   collectGroup
