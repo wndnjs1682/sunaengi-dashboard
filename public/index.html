@@ -1430,8 +1430,26 @@ function renderToday(d){
   $('sumChanged').textContent=
     d.summary.changed+'건';
 
+  const warningCount=
+    d.rows.filter(r=>{
+      const o=r.order||{};
+      const lowAuto=
+        o.status==='정상'
+        &&
+        Number.isFinite(Number(o.reservation))
+        &&
+        Number(o.reservation)>=0
+        &&
+        Number(o.reservation)<=4;
+
+      const existingWarn=
+        !['정상','수기확정','출항없음'].includes(o.status||'');
+
+      return lowAuto||existingWarn;
+    }).length;
+
   $('sumWarn').textContent=
-    d.summary.warn+'건';
+    warningCount+'건';
 
   $('sumPaid').textContent=
     d.summary.paid+'개';
@@ -1499,7 +1517,17 @@ function renderToday(d){
           </td>
 
           <td>
-            ${r.order.status||'확인필요'}
+            ${
+              r.order.status==='정상'
+              &&
+              Number.isFinite(Number(r.order.reservation))
+              &&
+              Number(r.order.reservation)>=0
+              &&
+              Number(r.order.reservation)<=4
+                ?'<span class="badge b-yellow">출항확인</span>'
+                :(r.order.status||'확인필요')
+            }
           </td>
         </tr>
       `)
@@ -1787,13 +1815,33 @@ function rowHtml(r,i){
         <span
           class="badge ${
             o.status==='정상'
-            ||
-            o.status==='수기확정'
-              ?'b-green'
-              :'b-gray'
+            &&
+            cur!=null
+            &&
+            Number(cur)>=0
+            &&
+            Number(cur)<=4
+              ?'b-yellow'
+              :(
+                o.status==='정상'
+                ||
+                o.status==='수기확정'
+                  ?'b-green'
+                  :'b-gray'
+              )
           }"
         >
-          ${o.status||'확인필요'}
+          ${
+            o.status==='정상'
+            &&
+            cur!=null
+            &&
+            Number(cur)>=0
+            &&
+            Number(cur)<=4
+              ?'출항확인'
+              :(o.status||'확인필요')
+          }
         </span>
 
       </td>
