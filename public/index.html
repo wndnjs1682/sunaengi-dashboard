@@ -261,27 +261,42 @@ td:first-child,th:first-child{text-align:left}
     </div>
   </div>
 
-  <div class="grid g3 section finance-panel locked" id="todayFinance">
-    <div class="card">
-      <b>💰 오늘 매출</b>
-      <div class="v finance-value" id="todaySalesValue">—</div>
-      <div class="small finance-detail" id="todaySalesDetail">선택 날짜 기준</div>
-    </div>
 
-    <div class="card">
-      <b>🏦 오늘 입금</b>
-      <div class="v finance-value" id="todayIncomeValue">—</div>
-      <div class="finance-detail" style="margin-top:6px">
-        <span class="badge b-red" id="todayDueBadge" style="font-size:12px;padding:5px 9px">
-          💸 미수 —
-        </span>
+  <div class="section card" id="todoSection">
+    <div
+      class="section-title"
+      id="todoToggle"
+      style="cursor:pointer;margin-bottom:0"
+      role="button"
+      tabindex="0"
+    >
+      <div>
+        <b>✅ 오늘 해야 할 일</b>
+        <div class="small" id="todoProgress">0 / 0 완료</div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="badge b-blue" id="todoRemainBadge">0개 남음</span>
+        <span id="todoChevron" style="font-size:18px">▼</span>
       </div>
     </div>
 
-    <div class="card">
-      <b>🧾 세금계산서</b>
-      <div class="v finance-value" id="todayTaxValue">미연동</div>
-      <div class="small finance-detail" id="todayTaxDetail">세금계산서 API 연결 필요</div>
+    <div id="todoBody" style="margin-top:10px">
+      <div class="section-title">
+        <div class="small">날짜별 추가 · 삭제 · 체크 자동 저장</div>
+        <button id="resetChecklistBtn">체크 초기화</button>
+      </div>
+
+      <div class="list" id="dailyChecklist" style="margin-top:10px"></div>
+
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <input
+          id="newTaskInput"
+          placeholder="새 할 일을 입력하세요"
+          style="flex:1"
+        >
+        <button class="yellow" id="addTaskBtn">+ 할 일 추가</button>
+      </div>
     </div>
   </div>
 
@@ -291,14 +306,24 @@ td:first-child,th:first-child{text-align:left}
   </div>
 
   <div class="section card">
-    <div class="section-title">
+    <div
+      class="section-title"
+      id="recentAchToggle"
+      style="cursor:pointer;margin-bottom:0"
+      role="button"
+      tabindex="0"
+    >
       <div>
         <b>🏆 최근 업적</b>
         <div class="small">실제 누적데이터와 자동 연동</div>
       </div>
-      <button data-pagejump="history">전체 업적 보기</button>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button data-pagejump="history" onclick="event.stopPropagation()">전체 업적 보기</button>
+        <span id="recentAchChevron" style="font-size:18px">▼</span>
+      </div>
     </div>
 
+    <div id="recentAchBody" style="margin-top:10px">
     <div class="achievement-grid">
       <div class="ach">
         <div class="ach-ico">🥇</div>
@@ -323,6 +348,7 @@ td:first-child,th:first-child{text-align:left}
         <div class="ach-title">성수기 일평균 250개</div>
         <div class="ach-date">아직 잠김</div>
       </div>
+    </div>
     </div>
   </div>
 
@@ -687,150 +713,136 @@ td:first-child,th:first-child{text-align:left}
   </div>
 
   <div class="section card">
-
     <div class="section-title">
       <div>
         <b>📊 손익·원가율 분석</b>
-        <div class="small">선택 기간의 실제 매출/지출 데이터를 자동 집계</div>
+        <div class="small">선택 기간의 실제 매출·지출 데이터를 자동 집계</div>
       </div>
 
       <div class="rangebar" style="margin:0">
-        <button class="preset">오늘</button>
-        <button class="preset">이번주</button>
-        <button class="preset on">이번달</button>
+        <button class="preset profit-preset" data-profit-range="today">오늘</button>
+        <button class="preset profit-preset" data-profit-range="week">이번주</button>
+        <button class="preset profit-preset on" data-profit-range="month">이번달</button>
+        <button class="preset profit-preset" data-profit-range="custom">직접기간</button>
 
         <label>
           시작
-          <input type="date" value="2026-09-01">
+          <input id="profitStart" type="date">
         </label>
 
         <label>
           종료
-          <input type="date" value="2026-09-30">
+          <input id="profitEnd" type="date">
         </label>
 
-        <button class="yellow">조회</button>
+        <button class="yellow" id="profitQueryBtn">조회</button>
       </div>
     </div>
-
   </div>
 
   <div class="profit-grid section">
-
     <div class="card">
       <div class="k">기간 매출</div>
-      <div class="profit-main">18,640,000원</div>
+      <div class="profit-main" id="profitSales">—</div>
     </div>
 
     <div class="card">
       <div class="k">식자재 원가율</div>
-      <div class="profit-main">33.0%</div>
-      <div class="small">6,151,200원</div>
+      <div class="profit-main" id="profitFoodRate">—</div>
+      <div class="small" id="profitFoodAmount">—</div>
     </div>
 
     <div class="card">
       <div class="k">총 직접원가율</div>
-      <div class="profit-main">39.4%</div>
-      <div class="small">식자재 + 용기</div>
+      <div class="profit-main" id="profitDirectRate">—</div>
+      <div class="small" id="profitDirectAmount">식자재 + 용기</div>
     </div>
 
     <div class="card">
-      <div class="k">예상 영업이익</div>
-      <div class="profit-main">9,325,000원</div>
-      <div class="small">이익률 50.0%</div>
+      <div class="k">실제 영업이익</div>
+      <div class="profit-main" id="profitOperating">—</div>
+      <div class="small" id="profitOperatingRate">—</div>
     </div>
-
   </div>
 
   <div class="grid g2 section">
-
     <div class="card">
       <b>원가 구성</b>
-
       <div class="list" style="margin-top:9px">
-        <div class="row"><span>식자재</span><b>6,151,200원 · 33.0%</b></div>
-        <div class="row"><span>용기/소모품</span><b>1,193,000원 · 6.4%</b></div>
-        <div class="row"><span>인건비</span><b>1,350,000원</b></div>
-        <div class="row"><span>기타지출</span><b>620,000원</b></div>
-        <div class="row"><span>출항취소 손실</span><b style="color:#b91c1c">95,000원</b></div>
+        <div class="row"><span>식자재</span><b id="costFood">—</b></div>
+        <div class="row"><span>용기/소모품</span><b id="costContainer">—</b></div>
+        <div class="row"><span>인건비</span><b id="costLabor">—</b></div>
+        <div class="row"><span>기타지출</span><b id="costOther">—</b></div>
+        <div class="row"><span>출항취소 손실</span><b id="costCancel" style="color:#b91c1c">—</b></div>
       </div>
     </div>
 
     <div class="card">
-      <b>도시락 1개당 지표</b>
-
+      <b>도시락 1개당 실제 지표</b>
       <div class="list" style="margin-top:9px">
-        <div class="row"><span>개당 매출</span><b>8,000원</b></div>
-        <div class="row"><span>개당 식자재비</span><b>2,640원</b></div>
-        <div class="row"><span>개당 용기비</span><b>512원</b></div>
-        <div class="row"><span>개당 직접원가</span><b>3,152원</b></div>
-        <div class="row"><span>개당 영업이익</span><b>4,002원</b></div>
+        <div class="row"><span>개당 매출</span><b id="unitSales">—</b></div>
+        <div class="row"><span>개당 식자재비</span><b id="unitFood">—</b></div>
+        <div class="row"><span>개당 용기비</span><b id="unitContainer">—</b></div>
+        <div class="row"><span>개당 직접원가</span><b id="unitDirect">—</b></div>
+        <div class="row"><span>개당 영업이익</span><b id="unitProfit">—</b></div>
+      </div>
+      <div class="small" style="margin-top:8px">
+        ※ 선택 기간의 실제 지출액 ÷ 유료 판매수량 기준
       </div>
     </div>
-
   </div>
 
   <div class="section bank-box">
-
     <div class="section-title">
       <div>
         <b style="font-size:18px">💰 내 돈 찾기 · 예상 통장잔액</b>
-        <div class="small">“통장에 대충 얼마 있어야 정상인가?” 확인용</div>
+        <div class="small">실제 입금·지출·미수와 재무 API 값을 기준으로 표시</div>
       </div>
-
       <span class="badge b-blue">장부 vs 실제통장 비교</span>
     </div>
 
     <div class="grid g4">
       <div class="card">
         <div class="k">기초 사업통장</div>
-        <div class="v">5,000,000원</div>
+        <div class="v" id="bankOpening">미연동</div>
       </div>
 
       <div class="card">
         <div class="k">실제 입금</div>
-        <div class="v">17,920,000원</div>
+        <div class="v" id="bankIncome">—</div>
       </div>
 
       <div class="card">
         <div class="k">실제 지출</div>
-        <div class="v">9,314,000원</div>
+        <div class="v" id="bankExpense">—</div>
       </div>
 
       <div class="card">
         <div class="k">사업주 인출</div>
-        <div class="v">3,000,000원</div>
+        <div class="v" id="bankOwner">미연동</div>
       </div>
     </div>
 
     <div class="grid g3 section">
-
       <div class="card">
         <div class="k">장부상 남은 돈</div>
-        <div class="v">9,326,000원</div>
+        <div class="v" id="bankBook">미연동</div>
       </div>
 
       <div class="card">
         <div class="k">현재 미수</div>
-        <div class="v" style="color:#b91c1c">720,000원</div>
+        <div class="v" id="bankDue" style="color:#b91c1c">—</div>
       </div>
 
       <div class="card">
         <div class="k">통장에 있어야 할 돈</div>
-        <div class="v big">10,606,000원</div>
+        <div class="v big" id="bankExpected">—</div>
       </div>
-
     </div>
 
-    <div class="bank-formula">
-      계산 예: 기초잔액 + 실제입금 - 실제지출 - 사업주인출 = 예상 통장잔액
+    <div class="bank-formula" id="bankFormula">
+      기초잔액·사업주인출 값은 백엔드에 실제 필드가 있을 때 자동 표시합니다.
     </div>
-
-    <div class="notice" style="margin-top:10px">
-      실제 통장잔액을 입력하면 차액도 계산:
-      실제 10,100,000원 → ⚠️ 장부와 통장 차이 -506,000원
-    </div>
-
   </div>
 </section>
 
@@ -874,12 +886,23 @@ td:first-child,th:first-child{text-align:left}
 
   <div class="section card">
 
-    <div class="section-title">
+    <div
+      class="section-title"
+      id="allAchToggle"
+      style="cursor:pointer;margin-bottom:0"
+      role="button"
+      tabindex="0"
+    >
       <div><b>🏆 전체 업적</b></div>
-      <span class="badge b-purple">자동판정</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="badge b-purple">자동판정</span>
+        <span id="allAchChevron" style="font-size:18px">▼</span>
+      </div>
     </div>
 
-    <div class="achievement-grid" id="achievementGrid"></div>
+    <div id="allAchBody" style="margin-top:10px">
+      <div class="achievement-grid" id="achievementGrid"></div>
+    </div>
   </div>
 
 </section>
@@ -1377,65 +1400,140 @@ function financeMask(){
   if(!unlocked){
     $('sumSales').textContent='••••••원';
 
-    if($('todaySalesValue')) $('todaySalesValue').textContent='••••••원';
-    if($('todayIncomeValue')) $('todayIncomeValue').textContent='••••••원';
-    if($('todayDueBadge')) $('todayDueBadge').textContent='💸 미수 ••••••원';
+
   }else if(APP.date){
     loadTodayFinance();
   }
 }
 
+
+function workspaceKey(kind,date){
+  return `sunaengi:${kind}:${date}`;
+}
+
+const DEFAULT_DAILY_TASKS=[
+  '예약 확인 및 변동 체크',
+  '식재료 발주 및 입고 확인',
+  '조리 계획 및 작업 인원 배치',
+  '도시락 포장 및 납품 준비',
+  '입금 · 미수 · 세금계산서 확인'
+];
+
+function getDailyTasks(date){
+  const key=workspaceKey('tasks',date);
+  const saved=localStorage.getItem(key);
+
+  if(saved){
+    try{
+      const parsed=JSON.parse(saved);
+      if(Array.isArray(parsed)) return parsed;
+    }catch(e){}
+  }
+
+  const tasks=DEFAULT_DAILY_TASKS.map((title,i)=>({
+    id:`default-${i+1}`,
+    title,
+    done:false
+  }));
+
+  saveDailyTasks(date,tasks);
+  return tasks;
+}
+
+function saveDailyTasks(date,tasks){
+  localStorage.setItem(
+    workspaceKey('tasks',date),
+    JSON.stringify(tasks)
+  );
+}
+
+function renderDailyTasks(){
+  const date=APP.date||$('opDate').value||today();
+  const list=$('dailyChecklist');
+  if(!list) return;
+
+  const tasks=getDailyTasks(date);
+
+  const doneCount=tasks.filter(t=>t.done).length;
+  const remainCount=Math.max(0,tasks.length-doneCount);
+
+  if($('todoProgress')){
+    $('todoProgress').textContent=
+      `${doneCount} / ${tasks.length} 완료`;
+  }
+
+  if($('todoRemainBadge')){
+    $('todoRemainBadge').textContent=
+      `${remainCount}개 남음`;
+  }
+
+  if(!tasks.length){
+    list.innerHTML='<div class="small" style="padding:12px 4px">등록된 할 일이 없습니다. 아래에서 추가하세요.</div>';
+    return;
+  }
+
+  list.innerHTML=tasks.map(t=>`
+    <div class="row" style="gap:8px">
+      <label style="display:flex;align-items:center;gap:9px;flex:1;cursor:pointer">
+        <input type="checkbox" data-task-id="${t.id}" ${t.done?'checked':''}>
+        <span style="${t.done?'text-decoration:line-through;opacity:.55':''}">
+          ${esc(t.title)}
+        </span>
+      </label>
+      <button class="task-delete" data-task-id="${t.id}" title="삭제" style="padding:4px 8px">×</button>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('input[type="checkbox"]').forEach(box=>{
+    box.onchange=()=>{
+      const current=getDailyTasks(date);
+      const task=current.find(x=>x.id===box.dataset.taskId);
+      if(task){
+        task.done=box.checked;
+        saveDailyTasks(date,current);
+        renderDailyTasks();
+      }
+    };
+  });
+
+  list.querySelectorAll('.task-delete').forEach(btn=>{
+    btn.onclick=()=>{
+      const current=getDailyTasks(date);
+      const task=current.find(x=>x.id===btn.dataset.taskId);
+      if(!task) return;
+      if(!confirm(`"${task.title}" 할 일을 삭제할까요?`)) return;
+      saveDailyTasks(date,current.filter(x=>x.id!==btn.dataset.taskId));
+      renderDailyTasks();
+    };
+  });
+}
+
+function addDailyTask(){
+  const input=$('newTaskInput');
+  const title=(input?.value||'').trim();
+  if(!title) return;
+
+  const date=APP.date||$('opDate').value||today();
+  const tasks=getDailyTasks(date);
+
+  tasks.push({
+    id:`task-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,
+    title,
+    done:false
+  });
+
+  saveDailyTasks(date,tasks);
+  input.value='';
+  renderDailyTasks();
+  input.focus();
+}
+
+function loadDailyWorkspace(){
+  renderDailyTasks();
+}
+
 async function loadTodayFinance(){
-  const salesEl=$('todaySalesValue');
-  const salesDetail=$('todaySalesDetail');
-  const incomeEl=$('todayIncomeValue');
-  const dueBadge=$('todayDueBadge');
-
-  if(!salesEl||!incomeEl||!dueBadge){
-    return;
-  }
-
-  /*
-    재무정보가 잠겨 있으면 실제 금액을 가져오지 않는다.
-  */
-  if(!APP.financeToken){
-    salesEl.textContent='••••••원';
-    incomeEl.textContent='••••••원';
-    dueBadge.textContent='💸 미수 ••••••원';
-    if(salesDetail) salesDetail.textContent='재무정보 잠김';
-    return;
-  }
-
-  try{
-    const f=await api(
-      `/api/finance?start=${APP.date}&end=${APP.date}`
-    );
-
-    salesEl.textContent=won(f.sales);
-    incomeEl.textContent=won(f.income);
-
-    if(salesDetail){
-      salesDetail.textContent=
-        `유료 ${Number(f.paid)||0}개 · 서비스 ${Number(f.service)||0}개`;
-    }
-
-    const outstandingCount=
-      Array.isArray(f.outstanding)
-        ?f.outstanding.filter(x=>(Number(x.due)||0)>0).length
-        :0;
-
-    dueBadge.textContent=
-      `💸 미수 ${won(f.receivable)} · ${outstandingCount}건`;
-
-  }catch(e){
-    salesEl.textContent='조회 실패';
-    incomeEl.textContent='조회 실패';
-    dueBadge.textContent='💸 미수 조회 실패';
-
-    if(salesDetail){
-      salesDetail.textContent=e.message||'재무 조회 실패';
-    }
-  }
+  return;
 }
 
 async function loadDay(){
@@ -1466,6 +1564,8 @@ async function loadDay(){
     renderToday(d);
 
     await loadTodayFinance();
+
+    loadDailyWorkspace();
 
     saveState('☁️ 저장됨');
 
@@ -2462,6 +2562,204 @@ async function needFinance(){
   }
 }
 
+
+function isoDateLocal(d){
+  return d.toLocaleDateString('sv-SE');
+}
+
+function rangeFor(mode,baseDate=today()){
+  const base=new Date(baseDate+'T00:00:00');
+
+  if(mode==='today'){
+    const x=isoDateLocal(base);
+    return {start:x,end:x};
+  }
+
+  if(mode==='week'){
+    const day=base.getDay();
+    const diff=(day===0?6:day-1);
+    const s=new Date(base);
+    s.setDate(base.getDate()-diff);
+    return {start:isoDateLocal(s),end:isoDateLocal(base)};
+  }
+
+  if(mode==='month'){
+    const s=new Date(base.getFullYear(),base.getMonth(),1);
+    return {start:isoDateLocal(s),end:isoDateLocal(base)};
+  }
+
+  return null;
+}
+
+function setPresetOn(selector,clicked){
+  document.querySelectorAll(selector).forEach(x=>x.classList.remove('on'));
+  clicked?.classList.add('on');
+}
+
+async function applySalesRange(mode,button){
+  setPresetOn('.sales-preset',button);
+
+  if(mode==='custom'){
+    $('salesStart').focus();
+    return;
+  }
+
+  const r=rangeFor(mode,today());
+  $('salesStart').value=r.start;
+  $('salesEnd').value=r.end;
+  await loadFinance();
+}
+
+async function applyProfitRange(mode,button){
+  setPresetOn('.profit-preset',button);
+
+  if(mode==='custom'){
+    $('profitStart').focus();
+    return;
+  }
+
+  const r=rangeFor(mode,today());
+  $('profitStart').value=r.start;
+  $('profitEnd').value=r.end;
+  await loadProfit();
+}
+
+function amountOf(x){
+  return Number(x?.amount)||0;
+}
+
+function expenseGroup(items){
+  const out={
+    food:0,
+    container:0,
+    labor:0,
+    other:0,
+    cancel:0,
+    total:0
+  };
+
+  for(const x of (items||[])){
+    const amount=amountOf(x);
+    const type=String(x.type||'');
+    const search=`${x.item||''} ${x.memo||''}`;
+
+    out.total+=amount;
+
+    if(type==='식자재'){
+      out.food+=amount;
+    }else if(type==='용기'){
+      out.container+=amount;
+    }else if(type==='인건비'){
+      out.labor+=amount;
+    }else{
+      if(/출항\s*취소|출항취소|결항|취소\s*손실/i.test(search)){
+        out.cancel+=amount;
+      }else{
+        out.other+=amount;
+      }
+    }
+  }
+
+  return out;
+}
+
+function pct(n,d){
+  return d>0 ? (n/d*100) : 0;
+}
+
+function perUnit(n,count){
+  return count>0 ? n/count : 0;
+}
+
+function setOptionalMoney(id,value){
+  const el=$(id);
+  if(!el) return;
+
+  if(value===undefined || value===null || value==='' || !Number.isFinite(Number(value))){
+    el.textContent='미연동';
+  }else{
+    el.textContent=won(Number(value));
+  }
+}
+
+async function loadProfit(){
+  await needFinance();
+
+  const start=$('profitStart').value;
+  const end=$('profitEnd').value;
+
+  if(!start||!end){
+    return;
+  }
+
+  saveState('☁️ 손익 계산 중...');
+
+  try{
+    const [f,e]=await Promise.all([
+      api(`/api/finance?start=${start}&end=${end}`),
+      api(`/api/expense?start=${start}&end=${end}`)
+    ]);
+
+    const c=expenseGroup(e.items||[]);
+    const sales=Number(f.sales)||0;
+    const paid=Number(f.paid)||0;
+
+    const direct=c.food+c.container;
+    const operating=sales-c.total;
+
+    $('profitSales').textContent=won(sales);
+    $('profitFoodRate').textContent=pct(c.food,sales).toFixed(1)+'%';
+    $('profitFoodAmount').textContent=won(c.food);
+    $('profitDirectRate').textContent=pct(direct,sales).toFixed(1)+'%';
+    $('profitDirectAmount').textContent=won(direct)+' · 식자재+용기';
+    $('profitOperating').textContent=won(operating);
+    $('profitOperatingRate').textContent='이익률 '+pct(operating,sales).toFixed(1)+'%';
+
+    $('costFood').textContent=
+      won(c.food)+' · '+pct(c.food,sales).toFixed(1)+'%';
+    $('costContainer').textContent=
+      won(c.container)+' · '+pct(c.container,sales).toFixed(1)+'%';
+    $('costLabor').textContent=won(c.labor);
+    $('costOther').textContent=won(c.other);
+    $('costCancel').textContent=won(c.cancel);
+
+    $('unitSales').textContent=won(perUnit(sales,paid));
+    $('unitFood').textContent=won(perUnit(c.food,paid));
+    $('unitContainer').textContent=won(perUnit(c.container,paid));
+    $('unitDirect').textContent=won(perUnit(direct,paid));
+    $('unitProfit').textContent=won(perUnit(operating,paid));
+
+    $('bankIncome').textContent=won(Number(f.income)||0);
+    $('bankExpense').textContent=won(c.total);
+    $('bankDue').textContent=won(Number(f.receivable)||0);
+
+    setOptionalMoney(
+      'bankOpening',
+      f.openingBank ?? f.startingBank ?? f.initialBank
+    );
+
+    setOptionalMoney(
+      'bankOwner',
+      f.ownerWithdrawals ?? f.ownerWithdrawal ?? f.ownerDraw
+    );
+
+    setOptionalMoney(
+      'bankBook',
+      f.bookBalance ?? f.ledgerBalance
+    );
+
+    setOptionalMoney(
+      'bankExpected',
+      f.expectedBank
+    );
+
+    saveState('☁️ 저장됨');
+
+  }catch(e){
+    saveState('⚠️ '+e.message);
+  }
+}
+
 async function loadFinance(){
 
   await needFinance();
@@ -2936,6 +3234,51 @@ async function loadHistory(){
       .join('');
 }
 
+
+function bindCollapse(toggleId,bodyId,chevronId,storageKey){
+  const toggle=$(toggleId);
+  const body=$(bodyId);
+  const chevron=$(chevronId);
+
+  if(!toggle||!body||!chevron){
+    return;
+  }
+
+  const saved=localStorage.getItem(storageKey);
+  let open=saved===null ? false : saved==='1';
+
+  const apply=()=>{
+    body.style.display=open?'block':'none';
+    chevron.textContent=open?'▲':'▼';
+    localStorage.setItem(storageKey,open?'1':'0');
+  };
+
+  const flip=e=>{
+    if(
+      e?.target?.closest?.('button,input,a,select,textarea')
+      &&
+      e.target!==toggle
+    ){
+      return;
+    }
+
+    open=!open;
+    apply();
+  };
+
+  toggle.addEventListener('click',flip);
+
+  toggle.addEventListener('keydown',e=>{
+    if(e.key==='Enter'||e.key===' '){
+      e.preventDefault();
+      open=!open;
+      apply();
+    }
+  });
+
+  apply();
+}
+
 document.addEventListener(
   'DOMContentLoaded',
   ()=>{
@@ -2949,11 +3292,79 @@ document.addEventListener(
     $('salesEnd').value=
       today();
 
+    if($('profitStart')){
+      $('profitStart').value=
+        today().slice(0,8)+'01';
+    }
+
+    if($('profitEnd')){
+      $('profitEnd').value=
+        today();
+    }
+
     $('histStart').value=
       today().slice(0,8)+'01';
 
     $('histEnd').value=
       today();
+
+    bindCollapse(
+      'todoToggle',
+      'todoBody',
+      'todoChevron',
+      'sunaengi:collapse:todo'
+    );
+
+    bindCollapse(
+      'recentAchToggle',
+      'recentAchBody',
+      'recentAchChevron',
+      'sunaengi:collapse:recentAchievements'
+    );
+
+    bindCollapse(
+      'allAchToggle',
+      'allAchBody',
+      'allAchChevron',
+      'sunaengi:collapse:allAchievements'
+    );
+
+    if($('addTaskBtn')){
+      $('addTaskBtn').onclick=addDailyTask;
+    }
+
+    if($('newTaskInput')){
+      $('newTaskInput').addEventListener('keydown',e=>{
+        if(e.key==='Enter'){
+          e.preventDefault();
+          addDailyTask();
+        }
+      });
+    }
+
+          clearTimeout(memoTimer);
+
+          memoTimer=setTimeout(
+            saveDailyMemo,
+            250
+          );
+        }
+      );
+    }
+
+    if($('resetChecklistBtn')){
+      $('resetChecklistBtn').onclick=()=>{
+        if(!confirm('이 날짜의 체크를 모두 초기화할까요?')){
+          return;
+        }
+
+        const date=APP.date||$('opDate').value||today();
+        const tasks=getDailyTasks(date);
+        tasks.forEach(t=>t.done=false);
+        saveDailyTasks(date,tasks);
+        renderDailyTasks();
+      };
+    }
 
     $('prevDay').onclick=
       ()=>setDate(
@@ -3048,6 +3459,31 @@ document.addEventListener(
     $('salesQueryBtn').onclick=
       loadFinance;
 
+    document
+      .querySelectorAll('.sales-preset')
+      .forEach(btn=>{
+        btn.onclick=
+          ()=>applySalesRange(
+            btn.dataset.range,
+            btn
+          );
+      });
+
+    if($('profitQueryBtn')){
+      $('profitQueryBtn').onclick=
+        loadProfit;
+    }
+
+    document
+      .querySelectorAll('.profit-preset')
+      .forEach(btn=>{
+        btn.onclick=
+          ()=>applyProfitRange(
+            btn.dataset.profitRange,
+            btn
+          );
+      });
+
     $('histQueryBtn').onclick=
       loadHistory;
 
@@ -3073,10 +3509,11 @@ document.addEventListener(
 
                 await needFinance();
 
-                if(
+                if(b.dataset.page==='profit'){
+                  await loadProfit();
+                }else if(
                   b.dataset.page!=='tax'
                 ){
-
                   await loadFinance();
                 }
 
