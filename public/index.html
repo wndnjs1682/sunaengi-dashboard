@@ -546,138 +546,37 @@ td:first-child,th:first-child{text-align:left}
 <section class="page" id="tax">
 
   <div class="notice finance-gate" data-finance-page="tax">
-    🔒 <b>세금계산서</b>은 관리자 재무정보입니다.
-    상단의 <b>재무정보 보기</b>에서 비밀번호를 입력하면 함께 잠금 해제됩니다.
-  </div>
-
-  <div class="grid g4 section">
-    <div class="card"><div class="k">발행대상</div><div class="v">8건</div></div>
-    <div class="card"><div class="k">발행완료</div><div class="v">5건</div></div>
-    <div class="card"><div class="k">발행대기</div><div class="v">3건</div></div>
-    <div class="card"><div class="k">VAT 합계</div><div class="v">356,000원</div></div>
+    🔒 <b>세금계산서</b>는 관리자 재무정보입니다.
+    거래처 관리에서 <b>세금계산서 = 발행</b>으로 저장한 거래처만 표시됩니다.
   </div>
 
   <div class="section card">
     <div class="section-title">
-      <b>세금계산서 발행 관리</b>
-      <button class="navy">선택 발행완료 처리</button>
-    </div>
-
-    <div class="scroll">
-      <table style="min-width:850px">
-        <thead>
-          <tr>
-            <th>거래처/묶음</th>
-            <th>귀속기간</th>
-            <th>유료수량</th>
-            <th>공급가액</th>
-            <th>VAT</th>
-            <th>합계</th>
-            <th>상태</th>
-            <th>상세</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          <tr>
-            <td class="name">가가호 (피싱브로)</td>
-            <td>2026년 9월</td>
-            <td><b>140개</b></td>
-            <td>1,120,000</td>
-            <td>112,000</td>
-            <td>1,232,000</td>
-            <td><span class="badge b-yellow">발행대기</span></td>
-            <td><button class="detailBtn" data-detail="tax1">상세보기</button></td>
-          </tr>
-
-          <tr>
-            <td class="name">미르호 + 포세이돈</td>
-            <td>2026년 9월</td>
-            <td><b>200개</b></td>
-            <td>1,600,000</td>
-            <td>160,000</td>
-            <td>1,760,000</td>
-            <td><span class="badge b-green">발행완료</span></td>
-            <td><button class="detailBtn" data-detail="tax2">상세보기</button></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <div class="section card hidden" id="tax1">
-    <div class="section-title">
-      <b>가가호 2026년 9월 상세</b>
-      <span>
-        <span class="badge b-green">입금완료</span>
-        <span class="badge b-yellow">계산서 대기</span>
-      </span>
-    </div>
-
-    <div class="scroll">
-      <table style="min-width:760px">
-        <thead>
-          <tr>
-            <th>날짜</th>
-            <th>유료</th>
-            <th>서비스</th>
-            <th>적용단가</th>
-            <th>공급가액</th>
-            <th>VAT</th>
-            <th>합계</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          <tr>
-            <td>09/01</td>
-            <td>20</td>
-            <td>2</td>
-            <td>8,000</td>
-            <td>160,000</td>
-            <td>16,000</td>
-            <td>176,000</td>
-          </tr>
-
-          <tr>
-            <td>09/02</td>
-            <td>18</td>
-            <td>1</td>
-            <td>8,000</td>
-            <td>144,000</td>
-            <td>14,400</td>
-            <td>158,400</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <div class="section card hidden" id="tax2">
-
-    <div class="section-title">
-      <b>미르호 + 포세이돈 계산서 묶음 상세</b>
-      <span class="badge b-green">발행완료</span>
-    </div>
-
-    <div class="grid g2">
-      <div class="card">
-        <div class="k">미르호 유료</div>
-        <div class="v">120개</div>
+      <div>
+        <b>🧾 세금계산서 발행 관리</b>
+        <div class="small" id="taxPeriodLabel">선택 날짜 기준 월별 집계</div>
       </div>
+      <button class="yellow" id="taxReloadBtn">새로고침</button>
+    </div>
+  </div>
 
-      <div class="card">
-        <div class="k">포세이돈 유료</div>
-        <div class="v">80개</div>
+  <div class="grid g4 section">
+    <div class="card"><div class="k">발행대상</div><div class="v" id="taxTargetCount">0건</div></div>
+    <div class="card"><div class="k">발행완료</div><div class="v" id="taxDoneCount">0건</div></div>
+    <div class="card"><div class="k">발행대기</div><div class="v" id="taxWaitCount">0건</div></div>
+    <div class="card"><div class="k">VAT 합계</div><div class="v" id="taxVatTotal">0원</div></div>
+  </div>
+
+  <div class="section card">
+    <div class="section-title">
+      <div>
+        <b>거래처/묶음별 월 합계</b>
+        <div class="small">상세보기를 누르면 거래처 전달용 일별 내역이 펼쳐집니다.</div>
       </div>
     </div>
-
-    <div class="small" style="margin-top:8px">
-      계산서는 두 배를 합쳐 유료 200개 기준으로 발행.
-      상세에서는 배별·날짜별 내역 확인.
-    </div>
-
+    <div id="taxGroups"></div>
   </div>
+
 </section>
 
 <section class="page" id="profit">
@@ -980,8 +879,16 @@ td:first-child,th:first-child{text-align:left}
         </label>
 
         <label>
+          세금계산서<br>
+          <select id="cmTaxOn">
+            <option value="false">미발행</option>
+            <option value="true">발행</option>
+          </select>
+        </label>
+
+        <label>
           계산서 묶음<br>
-          <input id="cmTaxGroup">
+          <input id="cmTaxGroup" placeholder="비우면 거래처별 발행">
         </label>
 
         <label>
@@ -2428,8 +2335,11 @@ function openClient(id){
   $('cmVat').value=
     c.vat_mode||'VAT별도';
 
+  $('cmTaxOn').value=
+    String(!!c.tax_group);
+
   $('cmTaxGroup').value=
-    c.tax_group||c.name||'';
+    c.tax_group||'';
 
   $('cmSoup').value=
     String(
@@ -2510,7 +2420,12 @@ async function saveClient(){
       $('cmVat').value,
 
     tax_group:
-      $('cmTaxGroup').value,
+      $('cmTaxOn').value==='true'
+        ?(
+            $('cmTaxGroup').value.trim()
+            ||$('cmName').value.trim()
+          )
+        :'',
 
     soup_separate:
       $('cmSoup').value==='true',
@@ -3455,6 +3370,175 @@ async function deleteExpense(id){
   loadFinance();
 }
 
+
+function taxMonthRange(){
+  const raw=$('date')?.value||today();
+  const d=new Date(raw+'T00:00:00');
+  const start=isoDateLocal(new Date(d.getFullYear(),d.getMonth(),1));
+  const end=isoDateLocal(new Date(d.getFullYear(),d.getMonth()+1,0));
+  return {start,end,ym:start.slice(0,7)};
+}
+
+function taxStatusKey(ym,group){
+  return `sunaengi:tax:${ym}:${group}`;
+}
+
+function taxStatus(ym,group){
+  return localStorage.getItem(taxStatusKey(ym,group))==='done';
+}
+
+function setTaxStatus(ym,group,done){
+  localStorage.setItem(taxStatusKey(ym,group),done?'done':'wait');
+  loadTax();
+}
+
+function taxMoneyForOrder(o,c){
+  const paid=Number(o.paid)||0;
+  const unit=Number(o.unit_price)||Number(c?.unit_price)||8000;
+  const mode=c?.vat_mode||'VAT별도';
+
+  if(mode==='VAT포함'){
+    const total=paid*unit;
+    const supply=Math.round(total/1.1);
+    return {supply,vat:total-supply,total};
+  }
+
+  const supply=Number(o.supply_amount)||paid*unit;
+  const vat=Number(o.vat_amount)||Math.round(supply*0.1);
+  const total=Number(o.total_amount)||supply+vat;
+  return {supply,vat,total};
+}
+
+async function loadTax(){
+  await needFinance();
+
+  if(!APP.clients.length){
+    await loadClients();
+  }
+
+  const {start,end,ym}=taxMonthRange();
+
+  const h=await api(`/api/history?start=${start}&end=${end}`);
+  const orders=Array.isArray(h.orders)?h.orders:[];
+
+  const eligible=APP.clients.filter(c=>c.active!==false && String(c.tax_group||'').trim());
+  const eligibleIds=new Set(eligible.map(c=>String(c.id)));
+  const clientMap=Object.fromEntries(APP.clients.map(c=>[String(c.id),c]));
+
+  const groups={};
+
+  for(const o of orders){
+    const cid=String(o.client_id);
+    if(!eligibleIds.has(cid)) continue;
+    if((Number(o.paid)||0)<=0) continue;
+
+    const c=clientMap[cid]||{};
+    const group=String(c.tax_group||c.name||cid).trim();
+    if(!groups[group]){
+      groups[group]={group,paid:0,service:0,supply:0,vat:0,total:0,rows:[],ships:new Set()};
+    }
+
+    const m=taxMoneyForOrder(o,c);
+    groups[group].paid+=Number(o.paid)||0;
+    groups[group].service+=Number(o.service)||0;
+    groups[group].supply+=m.supply;
+    groups[group].vat+=m.vat;
+    groups[group].total+=m.total;
+    groups[group].ships.add(c.name||cid);
+    groups[group].rows.push({...o,_client:c,_money:m});
+  }
+
+  const list=Object.values(groups).sort((a,b)=>a.group.localeCompare(b.group,'ko'));
+  const done=list.filter(g=>taxStatus(ym,g.group)).length;
+
+  $('taxTargetCount').textContent=list.length+'건';
+  $('taxDoneCount').textContent=done+'건';
+  $('taxWaitCount').textContent=(list.length-done)+'건';
+  $('taxVatTotal').textContent=won(list.reduce((s,g)=>s+g.vat,0));
+  $('taxPeriodLabel').textContent=`${ym.replace('-','년 ')}월 · ${start} ~ ${end}`;
+
+  const root=$('taxGroups');
+  if(!list.length){
+    root.innerHTML='<div class="small" style="padding:16px">이 달에 세금계산서 발행 대상 거래처의 유료 주문이 없습니다.</div>';
+    return;
+  }
+
+  root.innerHTML=list.map(g=>{
+    const done=taxStatus(ym,g.group);
+    const rows=g.rows.sort((a,b)=>a.order_date.localeCompare(b.order_date)).map(o=>{
+      const c=o._client||{};
+      const m=o._money;
+      return `
+        <tr>
+          <td>${o.order_date}</td>
+          <td>${escapeHtml(c.name||o.client_id)}</td>
+          <td><b>${Number(o.paid)||0}개</b></td>
+          <td>${Number(o.service)||0}개</td>
+          <td>${won(Number(o.unit_price)||Number(c.unit_price)||8000)}</td>
+          <td>${won(m.supply)}</td>
+          <td>${won(m.vat)}</td>
+          <td><b>${won(m.total)}</b></td>
+        </tr>`;
+    }).join('');
+
+    return `
+      <details class="card" style="margin-bottom:10px;padding:0;overflow:hidden">
+        <summary style="cursor:pointer;list-style:none;padding:14px">
+          <div style="display:grid;grid-template-columns:1.5fr .7fr 1fr 1fr 1fr;gap:12px;align-items:center">
+            <div>
+              <b style="font-size:17px">${escapeHtml(g.group)}</b>
+              <div class="small">${[...g.ships].map(escapeHtml).join(' + ')}</div>
+            </div>
+            <div><span class="small">유료</span><br><b>${g.paid}개</b></div>
+            <div><span class="small">공급가액</span><br><b>${won(g.supply)}</b></div>
+            <div><span class="small">VAT</span><br><b>${won(g.vat)}</b></div>
+            <div>
+              <span class="badge ${done?'b-green':'b-yellow'}">${done?'발행완료':'발행대기'}</span>
+              <div style="margin-top:6px"><b>${won(g.total)}</b></div>
+            </div>
+          </div>
+        </summary>
+
+        <div style="padding:0 14px 14px">
+          <div class="notice" style="margin-bottom:10px">
+            📸 거래처 문의 시 아래 일별 내역을 그대로 캡처해 전달할 수 있습니다.
+          </div>
+          <div class="scroll">
+            <table style="min-width:900px">
+              <thead>
+                <tr>
+                  <th>날짜</th><th>거래처</th><th>유료</th><th>서비스</th>
+                  <th>단가</th><th>공급가액</th><th>VAT</th><th>합계</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+              <tfoot>
+                <tr>
+                  <th colspan="2">월 합계</th>
+                  <th>${g.paid}개</th>
+                  <th>${g.service}개</th>
+                  <th>-</th>
+                  <th>${won(g.supply)}</th>
+                  <th>${won(g.vat)}</th>
+                  <th>${won(g.total)}</th>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px">
+            <button
+              class="${done?'':'navy'}"
+              onclick="setTaxStatus('${ym}',${JSON.stringify(g.group)},${done?'false':'true'})"
+            >
+              ${done?'발행대기로 되돌리기':'발행완료 처리'}
+            </button>
+          </div>
+        </div>
+      </details>`;
+  }).join('');
+}
+
 async function loadHistory(){
 
   const d=
@@ -3578,6 +3662,10 @@ document.addEventListener(
 
     $('histEnd').value=
       today();
+
+    if($('taxReloadBtn')){
+      $('taxReloadBtn').onclick=()=>loadTax().catch(e=>alert(e.message));
+    }
 
     if($('addTaskBtn')){
       $('addTaskBtn').onclick=addDailyTask;
@@ -3808,6 +3896,27 @@ document.addEventListener(
   }
 );
 
+
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-page="tax"]');
+  if(!b) return;
+  setTimeout(()=>{
+    if(APP.financeToken){
+      loadTax().catch(err=>console.error(err));
+    }
+  },0);
+});
+
+if($('cmTaxOn')){
+  $('cmTaxOn').addEventListener('change',()=>{
+    if($('cmTaxOn').value==='true' && !$('cmTaxGroup').value.trim()){
+      $('cmTaxGroup').value=$('cmName').value.trim();
+    }
+    if($('cmTaxOn').value==='false'){
+      $('cmTaxGroup').value='';
+    }
+  });
+}
 </script>
 
 </body>
