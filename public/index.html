@@ -2188,26 +2188,35 @@ function writeClientTaxLocal(id,enabled,group){
 }
 
 function applyClientTaxFallback(client){
+  /*
+    새 API에서는 tax_enabled가 DB에서 내려오므로 DB 값을 우선 사용.
+    예전 데이터처럼 tax_enabled가 아예 없을 때만 로컬 fallback 사용.
+  */
+  if(
+    client.tax_enabled!==undefined
+    &&
+    client.tax_enabled!==null
+  ){
+    return client;
+  }
+
   const local=readClientTaxLocal(client.id);
 
   if(!local){
     return {
       ...client,
-      tax_enabled:!!client.tax_group
+      tax_enabled:false,
+      tax_group:null
     };
   }
 
-  /*
-    백엔드가 tax_group을 아직 저장하지 못하는 동안
-    같은 브라우저에서는 F5 후에도 세금계산서 설정이 유지되도록 fallback.
-  */
   return {
     ...client,
     tax_enabled:!!local.enabled,
     tax_group:
       local.enabled
         ?(local.group||client.name||'')
-        :''
+        :null
   };
 }
 
@@ -2395,9 +2404,7 @@ function openClient(id){
 
   $('cmTaxOn').value=
     String(
-      c.tax_enabled!==undefined
-        ?!!c.tax_enabled
-        :!!c.tax_group
+      c.tax_enabled===true
     );
 
   $('cmTaxGroup').value=
@@ -2481,13 +2488,19 @@ async function saveClient(){
     vat_mode:
       $('cmVat').value,
 
+    tax_enabled:
+      $('cmTaxOn').value==='true',
+
+    tax_cycle:
+      '월합산',
+
     tax_group:
       $('cmTaxOn').value==='true'
         ?(
             $('cmTaxGroup').value.trim()
             ||$('cmName').value.trim()
           )
-        :'',
+        :null,
 
     soup_separate:
       $('cmSoup').value==='true',
