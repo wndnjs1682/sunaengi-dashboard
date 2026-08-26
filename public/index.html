@@ -1198,8 +1198,6 @@ document.querySelectorAll('.detailBtn').forEach(btn=>{
 });
 
 refreshFinance();
-$('backupJsonBtn')?.addEventListener('click',backupJson);
-$('backupExcelBtn')?.addEventListener('click',backupExcel);
 </script>
 
 <div id="liveSave" class="liveSave">☁️ 연결 중...</div>
@@ -3931,6 +3929,14 @@ document.addEventListener(
 
     if($('saveContainerCostBtn')){
       $('saveContainerCostBtn').onclick=saveContainerCost;
+    }
+
+    if($('backupJsonBtn')){
+      $('backupJsonBtn').onclick=backupJson;
+    }
+
+    if($('backupExcelBtn')){
+      $('backupExcelBtn').onclick=backupExcel;
     }
 
     loadContainerCost().catch(()=>{});
