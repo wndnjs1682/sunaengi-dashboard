@@ -963,21 +963,32 @@ td:first-child,th:first-child{text-align:left}
 
     <div class="card">
       <b>🎁 서비스 규칙</b>
-      <p class="small">
-        예: 22명 주문 시 2개 서비스,
-        11개 이상 1개,
-        10개 이하 없음.
-        거래처별 예외 가능.
-      </p>
+      <p class="small">기본 서비스 수량을 설정합니다. 거래처별 예외는 다음 단계에서 별도 적용할 수 있습니다.</p>
+      <div class="list" style="margin-top:9px">
+        <div class="row"><span>2개 서비스 기준</span><input id="serviceTwoMin" type="number" min="0" step="1" value="22" style="max-width:100px"><span>개 이상</span></div>
+        <div class="row"><span>1개 서비스 기준</span><input id="serviceOneMin" type="number" min="0" step="1" value="11" style="max-width:100px"><span>개 이상</span></div>
+        <div class="row"><span>그 미만</span><b>서비스 0개</b></div>
+      </div>
+      <div style="margin-top:9px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="yellow" id="saveServiceRuleBtn" type="button">서비스 규칙 저장</button>
+        <span class="small" id="serviceRuleState">기본값: 22개→2 / 11개→1</span>
+      </div>
     </div>
 
     <div class="card">
       <b>🏖️ 시즌 목표</b>
-      <p class="small">
-        프리시즌/본시즌 기간,
-        일평균 목표,
-        다낭행 게이지 설정.
-      </p>
+      <p class="small">프리시즌과 본시즌 기간, 일평균 목표를 저장하고 다낭행 게이지에 반영합니다.</p>
+      <div class="list" style="margin-top:9px">
+        <div class="row"><span>프리시즌 시작</span><input id="preseasonStart" type="date" value="2026-08-01"></div>
+        <div class="row"><span>프리시즌 종료</span><input id="preseasonEnd" type="date" value="2026-08-31"></div>
+        <div class="row"><span>본시즌 시작</span><input id="seasonStart" type="date" value="2026-09-01"></div>
+        <div class="row"><span>본시즌 종료</span><input id="seasonEnd" type="date" value="2026-12-05"></div>
+        <div class="row"><span>일평균 목표</span><input id="seasonDailyGoal" type="number" min="1" step="1" value="250" style="max-width:100px"><span>개</span></div>
+      </div>
+      <div style="margin-top:9px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="yellow" id="saveSeasonGoalBtn" type="button">시즌 목표 저장</button>
+        <span class="small" id="seasonGoalState">본시즌 9/1~12/5 · 일평균 250개</span>
+      </div>
     </div>
 
     <div class="card">
@@ -1581,11 +1592,11 @@ function renderToday(d){
     d.summary.seasonPaid.toLocaleString()+
     '개';
 
+  const seasonCfg=getSeasonConfigFromInputs();
+  const seasonDays=countInclusiveDays(seasonCfg.start,seasonCfg.end);
+  const seasonTarget=Math.max(1,seasonDays*seasonCfg.dailyGoal);
   $('goalBar').style.width=
-    Math.min(
-      100,
-      d.summary.seasonPaid/(250*30)*100
-    )+'%';
+    Math.min(100,d.summary.seasonPaid/seasonTarget*100)+'%';
 
   $('todayRows').innerHTML=
     d.rows
@@ -2949,6 +2960,90 @@ async function restoreSelectedOrder(){
 }
 
 
+function countInclusiveDays(start,end){
+  if(!start||!end) return 0;
+  const a=new Date(start+'T00:00:00');
+  const b=new Date(end+'T00:00:00');
+  if(Number.isNaN(a.getTime())||Number.isNaN(b.getTime())||b<a) return 0;
+  return Math.floor((b-a)/86400000)+1;
+}
+
+function getSeasonConfigFromInputs(){
+  return {
+    preseasonStart:$('preseasonStart')?.value||'2026-08-01',
+    preseasonEnd:$('preseasonEnd')?.value||'2026-08-31',
+    start:$('seasonStart')?.value||'2026-09-01',
+    end:$('seasonEnd')?.value||'2026-12-05',
+    dailyGoal:Math.max(1,Math.round(Number($('seasonDailyGoal')?.value)||250))
+  };
+}
+
+async function getSetting(key,fallback=''){
+  try{
+    const r=await api('/api/finance?setting='+encodeURIComponent(key));
+    return r.value==null?fallback:r.value;
+  }catch(e){ return fallback; }
+}
+
+async function loadServiceRules(){
+  const [two,one]=await Promise.all([
+    getSetting('service_two_min','22'),
+    getSetting('service_one_min','11')
+  ]);
+  if($('serviceTwoMin')) $('serviceTwoMin').value=Number(two)||22;
+  if($('serviceOneMin')) $('serviceOneMin').value=Number(one)||11;
+  if($('serviceRuleState')) $('serviceRuleState').textContent=`현재: ${Number(two)||22}개 이상→2 / ${Number(one)||11}개 이상→1 / 미만→0`;
+}
+
+async function saveServiceRules(){
+  const two=Math.max(1,Math.round(Number($('serviceTwoMin')?.value)||22));
+  const one=Math.max(1,Math.round(Number($('serviceOneMin')?.value)||11));
+  if(one>=two){ alert('1개 서비스 기준은 2개 서비스 기준보다 작아야 합니다.'); return; }
+  try{
+    if($('serviceRuleState')) $('serviceRuleState').textContent='저장 중...';
+    await Promise.all([
+      api('/api/finance',{method:'POST',body:JSON.stringify({action:'setSetting',key:'service_two_min',value:String(two)})}),
+      api('/api/finance',{method:'POST',body:JSON.stringify({action:'setSetting',key:'service_one_min',value:String(one)})})
+    ]);
+    if($('serviceRuleState')) $('serviceRuleState').textContent=`저장됨 · ${two}개 이상→2 / ${one}개 이상→1 / 미만→0`;
+  }catch(e){
+    if($('serviceRuleState')) $('serviceRuleState').textContent='저장 실패: '+e.message;
+    alert('저장 실패: '+e.message);
+  }
+}
+
+async function loadSeasonGoal(){
+  const vals=await Promise.all([
+    getSetting('preseason_start','2026-08-01'),
+    getSetting('preseason_end','2026-08-31'),
+    getSetting('season_start','2026-09-01'),
+    getSetting('season_end','2026-12-05'),
+    getSetting('season_daily_goal','250')
+  ]);
+  const ids=['preseasonStart','preseasonEnd','seasonStart','seasonEnd','seasonDailyGoal'];
+  ids.forEach((id,i)=>{if($(id)) $(id).value=vals[i];});
+  const c=getSeasonConfigFromInputs();
+  if($('seasonGoalState')) $('seasonGoalState').textContent=`본시즌 ${c.start}~${c.end} · ${countInclusiveDays(c.start,c.end)}일 · 일평균 ${c.dailyGoal}개`;
+}
+
+async function saveSeasonGoal(){
+  const c=getSeasonConfigFromInputs();
+  if(!c.preseasonStart||!c.preseasonEnd||!c.start||!c.end||countInclusiveDays(c.start,c.end)<=0){ alert('시즌 날짜를 확인해주세요.'); return; }
+  try{
+    if($('seasonGoalState')) $('seasonGoalState').textContent='저장 중...';
+    const pairs=[
+      ['preseason_start',c.preseasonStart],['preseason_end',c.preseasonEnd],
+      ['season_start',c.start],['season_end',c.end],['season_daily_goal',String(c.dailyGoal)]
+    ];
+    await Promise.all(pairs.map(([key,value])=>api('/api/finance',{method:'POST',body:JSON.stringify({action:'setSetting',key,value})})));
+    if($('seasonGoalState')) $('seasonGoalState').textContent=`저장됨 · 본시즌 ${c.start}~${c.end} · ${countInclusiveDays(c.start,c.end)}일 · 일평균 ${c.dailyGoal}개`;
+    if(APP.date) await loadDay();
+  }catch(e){
+    if($('seasonGoalState')) $('seasonGoalState').textContent='저장 실패: '+e.message;
+    alert('저장 실패: '+e.message);
+  }
+}
+
 async function loadContainerCost(){
   try{
     const r=await api('/api/finance?setting=container_unit_cost');
@@ -4087,6 +4182,14 @@ document.addEventListener(
       $('saveContainerCostBtn').onclick=saveContainerCost;
     }
 
+    if($('saveServiceRuleBtn')){
+      $('saveServiceRuleBtn').onclick=saveServiceRules;
+    }
+
+    if($('saveSeasonGoalBtn')){
+      $('saveSeasonGoalBtn').onclick=saveSeasonGoal;
+    }
+
     if($('backupJsonBtn')){
       $('backupJsonBtn').onclick=backupJson;
     }
@@ -4122,6 +4225,8 @@ document.addEventListener(
     }
 
     loadContainerCost().catch(()=>{});
+    loadServiceRules().catch(()=>{});
+    loadSeasonGoal().catch(()=>{});
 
     $('histStart').value=
       today().slice(0,8)+'01';
