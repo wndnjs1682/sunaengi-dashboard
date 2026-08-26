@@ -3,8 +3,55 @@ const {db,json,requireFinance}=require('./_lib');
 module.exports=async(req,res)=>{
  if(!requireFinance(req,res))return;
 
+ const s=db();
+
  try{
-  const s=db();
+  if(req.method==='POST'){
+   const b=req.body||{};
+
+   if(b.action==='setSetting'){
+    const key=String(b.key||'').trim();
+    const value=String(b.value??'');
+
+    if(!key){
+     return json(res,400,{error:'key 필요'});
+    }
+
+    const {data,error}=await s
+      .from('settings')
+      .upsert({key,value},{onConflict:'key'})
+      .select('key,value')
+      .single();
+
+    if(error)throw error;
+
+    return json(res,200,{ok:true,setting:data});
+   }
+
+   return json(res,400,{error:'지원하지 않는 POST 요청'});
+  }
+
+  if(req.method!=='GET'){
+   return json(res,405,{error:'method'});
+  }
+
+  const settingKey=String(req.query.setting||'').trim();
+
+  if(settingKey){
+   const {data,error}=await s
+     .from('settings')
+     .select('key,value')
+     .eq('key',settingKey)
+     .maybeSingle();
+
+   if(error)throw error;
+
+   return json(res,200,{
+    key:settingKey,
+    value:data?.value ?? null
+   });
+  }
+
   const start=String(req.query.start||'2000-01-01');
   const end=String(req.query.end||'2099-12-31');
 
@@ -20,7 +67,9 @@ module.exports=async(req,res)=>{
    s.from('expenses').select('*').gte('expense_date',start).lte('expense_date',end),
    s.from('payments').select('*').gte('payment_date',start).lte('payment_date',end),
    s.from('payment_allocations').select('*'),
-   s.from('orders').select('order_date,client_id,paid,service,prepared,unit_price,supply_amount,vat_amount,total_amount').gt('total_amount',0),
+   s.from('orders')
+    .select('order_date,client_id,paid,service,prepared,unit_price,supply_amount,vat_amount,total_amount')
+    .gt('total_amount',0),
    s.from('settings').select('*')
   ]);
 
@@ -29,7 +78,6 @@ module.exports=async(req,res)=>{
   }
 
   const sum=(a,k)=>(a||[]).reduce((t,x)=>t+(Number(x[k])||0),0);
-
   const set=Object.fromEntries((settings||[]).map(x=>[x.key,x.value]));
 
   const sales=sum(orders,'total_amount');
@@ -37,8 +85,6 @@ module.exports=async(req,res)=>{
   const service=sum(orders,'service');
   const prepared=sum(orders,'prepared');
   const income=sum(payments,'amount');
-
-  // 실제 현금 지출 총액
   const expense=sum(expenses,'amount');
 
   const food=(expenses||[])
@@ -49,25 +95,13 @@ module.exports=async(req,res)=>{
    .filter(x=>x.type==='인건비')
    .reduce((t,x)=>t+(Number(x.amount)||0),0);
 
-  // 실제 용기 구매 지출액: 현금흐름에는 포함하되 손익 원가에서는 중복 제외
   const packPurchase=(expenses||[])
    .filter(x=>x.type==='용기')
    .reduce((t,x)=>t+(Number(x.amount)||0),0);
 
-  // 설정값이 없으면 기본 512원
   const containerUnitCost=Number(set.container_unit_cost)||512;
-
-  /*
-    핵심:
-    서비스 도시락도 용기를 사용하므로 유료수량이 아니라
-    실제 제작수량(prepared) × 개당 용기원가로 계산한다.
-  */
   const pack=prepared*containerUnitCost;
-
-  // 기타지출에서 실제 용기 구매액을 제외하여 손익 이중계산 방지
   const other=expense-food-labor-packPurchase;
-
-  // 손익용 총원가
   const operatingCost=food+pack+labor+other;
 
   const allocMap={};
@@ -86,17 +120,28 @@ module.exports=async(req,res)=>{
   })).filter(x=>x.due>0);
 
   const receivable=outstanding.reduce((t,x)=>t+(Number(x.due)||0),0);
-
   const opening=Number(set.opening_balance)||0;
   const withdrawal=Number(set.owner_withdrawal)||0;
 
-  const {data:allPay,error:aperr}=await s.from('payments').select('amount').lte('payment_date',end);
+  const {data:allPay,error:aperr}=await s
+   .from('payments')
+   .select('amount')
+   .lte('payment_date',end);
+
   if(aperr)throw aperr;
 
-  const {data:allExp,error:aeerr}=await s.from('expenses').select('amount').lte('expense_date',end);
+  const {data:allExp,error:aeerr}=await s
+   .from('expenses')
+   .select('amount')
+   .lte('expense_date',end);
+
   if(aeerr)throw aeerr;
 
-  const expectedBank=opening+sum(allPay,'amount')-sum(allExp,'amount')-withdrawal;
+  const expectedBank=
+   opening
+   +sum(allPay,'amount')
+   -sum(allExp,'amount')
+   -withdrawal;
 
   return json(res,200,{
    sales,
