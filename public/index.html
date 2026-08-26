@@ -2711,7 +2711,7 @@ function setOptionalMoney(id,value){
 
 async function loadContainerCost(){
   try{
-    const r=await api('/api/settings?key=container_unit_cost');
+    const r=await api('/api/finance?setting=container_unit_cost');
     const value=Number(r.value)||512;
 
     if($('containerUnitCost')){
@@ -2744,9 +2744,10 @@ async function saveContainerCost(){
       $('containerCostState').textContent='저장 중...';
     }
 
-    await api('/api/settings',{
+    await api('/api/finance',{
       method:'POST',
       body:JSON.stringify({
+        action:'setSetting',
         key:'container_unit_cost',
         value:String(value)
       })
