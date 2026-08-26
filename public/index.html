@@ -938,6 +938,23 @@ td:first-child,th:first-child{text-align:left}
           </select>
         </label>
 
+        <label>
+          서비스 적용<br>
+          <select id="cmServiceMode">
+            <option value="default">기본 규칙</option>
+            <option value="none">서비스 없음</option>
+            <option value="custom">직접 설정</option>
+          </select>
+        </label>
+
+        <div id="cmServiceCustomBox" class="hidden" style="grid-column:1/-1">
+          <div class="notice" style="margin-bottom:8px">이 거래처만 별도 서비스 기준을 사용합니다.</div>
+          <div class="expense-grid">
+            <label>2개 서비스 기준<br><input id="cmServiceTwoMin" type="number" min="1" step="1" value="22"></label>
+            <label>1개 서비스 기준<br><input id="cmServiceOneMin" type="number" min="1" step="1" value="11"></label>
+          </div>
+        </div>
+
       </div>
 
       <div style="margin-top:12px">
@@ -976,19 +993,28 @@ td:first-child,th:first-child{text-align:left}
     </div>
 
     <div class="card">
-      <b>🏖️ 시즌 목표</b>
-      <p class="small">프리시즌과 본시즌 기간, 일평균 목표를 저장하고 다낭행 게이지에 반영합니다.</p>
-      <div class="list" style="margin-top:9px">
-        <div class="row"><span>프리시즌 시작</span><input id="preseasonStart" type="date" value="2026-08-01"></div>
-        <div class="row"><span>프리시즌 종료</span><input id="preseasonEnd" type="date" value="2026-08-31"></div>
-        <div class="row"><span>본시즌 시작</span><input id="seasonStart" type="date" value="2026-09-01"></div>
-        <div class="row"><span>본시즌 종료</span><input id="seasonEnd" type="date" value="2026-12-05"></div>
-        <div class="row"><span>일평균 목표</span><input id="seasonDailyGoal" type="number" min="1" step="1" value="250" style="max-width:100px"><span>개</span></div>
-      </div>
-      <div style="margin-top:9px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <button class="yellow" id="saveSeasonGoalBtn" type="button">시즌 목표 저장</button>
-        <span class="small" id="seasonGoalState">본시즌 9/1~12/5 · 일평균 250개</span>
-      </div>
+      <details id="seasonGoalDetails">
+        <summary style="cursor:pointer;list-style:none">
+          <div class="section-title" style="margin-bottom:0">
+            <div>
+              <b>🏖️ 시즌 목표</b>
+              <div class="small" id="seasonGoalState">본시즌 9/1~12/5 · 일평균 250개</div>
+            </div>
+            <span class="badge b-blue">설정 펼치기 ▾</span>
+          </div>
+        </summary>
+        <div style="margin-top:10px">
+          <p class="small">프리시즌과 본시즌 기간, 일평균 목표를 저장하고 다낭행 게이지에 반영합니다.</p>
+          <div class="list" style="margin-top:9px">
+            <div class="row"><span>프리시즌 시작</span><input id="preseasonStart" type="date" value="2026-08-01"></div>
+            <div class="row"><span>프리시즌 종료</span><input id="preseasonEnd" type="date" value="2026-08-31"></div>
+            <div class="row"><span>본시즌 시작</span><input id="seasonStart" type="date" value="2026-09-01"></div>
+            <div class="row"><span>본시즌 종료</span><input id="seasonEnd" type="date" value="2026-12-05"></div>
+            <div class="row"><span>일평균 목표</span><input id="seasonDailyGoal" type="number" min="1" step="1" value="250" style="max-width:100px"><span>개</span></div>
+          </div>
+          <div style="margin-top:9px"><button class="yellow" id="saveSeasonGoalBtn" type="button">시즌 목표 저장</button></div>
+        </div>
+      </details>
     </div>
 
     <div class="card">
@@ -2414,6 +2440,24 @@ function bindDrag(){
     });
 }
 
+function clientServiceLocalKey(id){
+  return `sunaengi:client-service:${id||'new'}`;
+}
+
+function readClientServiceLocal(id){
+  try{return JSON.parse(localStorage.getItem(clientServiceLocalKey(id))||'null')||null;}catch(e){return null;}
+}
+
+function writeClientServiceLocal(id,data){
+  if(!id)return;
+  localStorage.setItem(clientServiceLocalKey(id),JSON.stringify(data));
+}
+
+function refreshClientServiceCustomBox(){
+  const mode=$('cmServiceMode')?.value||'default';
+  $('cmServiceCustomBox')?.classList.toggle('hidden',mode!=='custom');
+}
+
 function openClient(id){
 
   const c=
@@ -2488,6 +2532,12 @@ function openClient(id){
     String(
       !!c.manager_meal
     );
+
+  const serviceLocal=readClientServiceLocal(id)||{};
+  $('cmServiceMode').value=c.service_mode||serviceLocal.service_mode||'default';
+  $('cmServiceTwoMin').value=Number(c.service_two_min??serviceLocal.service_two_min??22);
+  $('cmServiceOneMin').value=Number(c.service_one_min??serviceLocal.service_one_min??11);
+  refreshClientServiceCustomBox();
 
   $('clientModal')
     .classList
@@ -2569,7 +2619,16 @@ async function saveClient(){
       $('cmManagerOn').value==='true',
 
     manager_meal:
-      $('cmManagerMeal').value==='true'
+      $('cmManagerMeal').value==='true',
+
+    service_mode:
+      $('cmServiceMode').value||'default',
+
+    service_two_min:
+      Number($('cmServiceTwoMin').value)||22,
+
+    service_one_min:
+      Number($('cmServiceOneMin').value)||11
   };
 
   await api(
@@ -2579,6 +2638,12 @@ async function saveClient(){
       body:JSON.stringify(b)
     }
   );
+
+  writeClientServiceLocal(APP.editingClient,{
+    service_mode:b.service_mode,
+    service_two_min:b.service_two_min,
+    service_one_min:b.service_one_min
+  });
 
   /*
     현재 clients API가 tax_group을 영구 저장하지 못하는 경우를 대비한
@@ -4188,6 +4253,10 @@ document.addEventListener(
 
     if($('saveSeasonGoalBtn')){
       $('saveSeasonGoalBtn').onclick=saveSeasonGoal;
+    }
+
+    if($('cmServiceMode')){
+      $('cmServiceMode').onchange=refreshClientServiceCustomBox;
     }
 
     if($('backupJsonBtn')){
