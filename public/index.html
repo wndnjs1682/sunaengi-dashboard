@@ -33,6 +33,14 @@ input,select{border:1px solid var(--line);border-radius:8px;padding:8px;backgrou
 .g5{grid-template-columns:repeat(5,1fr)}
 .g4{grid-template-columns:repeat(4,1fr)}
 .g3{grid-template-columns:repeat(3,1fr)}
+.settings-top{align-items:start}
+.settings-top>.card{align-self:start;padding:0;overflow:hidden}
+.settings-top details>summary{cursor:pointer;list-style:none;padding:13px}
+.settings-top details>summary::-webkit-details-marker{display:none}
+.settings-top .setting-body{padding:0 13px 13px;border-top:1px solid var(--line)}
+.settings-top .setting-head{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.settings-top .setting-toggle{flex:0 0 auto}
+.settings-top details[open] .setting-toggle{transform:rotate(180deg)}
 .g2{grid-template-columns:repeat(2,1fr)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:13px}
 .k{font-size:11px;color:var(--muted)}
@@ -968,42 +976,51 @@ td:first-child,th:first-child{text-align:left}
 
 <section class="page" id="settings">
 
-  <div class="grid g3 section">
+  <div class="grid g3 section settings-top">
 
     <div class="card">
-      <b>💵 기본 가격</b>
-      <p class="small">
-        기본 8,000원(VAT 별도) / 8,800원(VAT 포함).
-        거래처별 개별단가 우선.
-      </p>
+      <details>
+        <summary>
+          <div class="setting-head">
+            <div><b>💵 기본 가격</b><div class="small">기본 8,000원(VAT 별도) / 8,800원(VAT 포함)</div></div>
+            <span class="badge b-gray setting-toggle">▾</span>
+          </div>
+        </summary>
+        <div class="setting-body">
+          <p class="small">거래처별 개별단가가 설정되어 있으면 해당 단가를 우선 적용합니다.</p>
+        </div>
+      </details>
     </div>
 
     <div class="card">
-      <b>🎁 서비스 규칙</b>
-      <p class="small">기본 서비스 수량을 설정합니다. 거래처별 예외는 다음 단계에서 별도 적용할 수 있습니다.</p>
-      <div class="list" style="margin-top:9px">
-        <div class="row"><span>2개 서비스 기준</span><input id="serviceTwoMin" type="number" min="0" step="1" value="22" style="max-width:100px"><span>개 이상</span></div>
-        <div class="row"><span>1개 서비스 기준</span><input id="serviceOneMin" type="number" min="0" step="1" value="11" style="max-width:100px"><span>개 이상</span></div>
-        <div class="row"><span>그 미만</span><b>서비스 0개</b></div>
-      </div>
-      <div style="margin-top:9px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <button class="yellow" id="saveServiceRuleBtn" type="button">서비스 규칙 저장</button>
-        <span class="small" id="serviceRuleState">기본값: 22개→2 / 11개→1</span>
-      </div>
+      <details>
+        <summary>
+          <div class="setting-head">
+            <div><b>🎁 서비스 규칙</b><div class="small" id="serviceRuleState">현재: 22개 이상→2 / 11개 이상→1 / 미만→0</div></div>
+            <span class="badge b-blue setting-toggle">▾</span>
+          </div>
+        </summary>
+        <div class="setting-body">
+          <p class="small">기본 서비스 수량을 설정합니다. 거래처별 예외는 거래처 관리에서 별도 적용합니다.</p>
+          <div class="list" style="margin-top:9px">
+            <div class="row"><span>2개 서비스 기준</span><input id="serviceTwoMin" type="number" min="0" step="1" value="22" style="max-width:100px"><span>개 이상</span></div>
+            <div class="row"><span>1개 서비스 기준</span><input id="serviceOneMin" type="number" min="0" step="1" value="11" style="max-width:100px"><span>개 이상</span></div>
+            <div class="row"><span>그 미만</span><b>서비스 0개</b></div>
+          </div>
+          <div style="margin-top:9px"><button class="yellow" id="saveServiceRuleBtn" type="button">서비스 규칙 저장</button></div>
+        </div>
+      </details>
     </div>
 
     <div class="card">
       <details id="seasonGoalDetails">
-        <summary style="cursor:pointer;list-style:none">
-          <div class="section-title" style="margin-bottom:0">
-            <div>
-              <b>🏖️ 시즌 목표</b>
-              <div class="small" id="seasonGoalState">본시즌 9/1~12/5 · 일평균 250개</div>
-            </div>
-            <span class="badge b-blue">설정 펼치기 ▾</span>
+        <summary>
+          <div class="setting-head">
+            <div><b>🏖️ 시즌 목표</b><div class="small" id="seasonGoalState">본시즌 9/1~12/5 · 일평균 250개</div></div>
+            <span class="badge b-blue setting-toggle">▾</span>
           </div>
         </summary>
-        <div style="margin-top:10px">
+        <div class="setting-body">
           <p class="small">프리시즌과 본시즌 기간, 일평균 목표를 저장하고 다낭행 게이지에 반영합니다.</p>
           <div class="list" style="margin-top:9px">
             <div class="row"><span>프리시즌 시작</span><input id="preseasonStart" type="date" value="2026-08-01"></div>
