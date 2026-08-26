@@ -2816,15 +2816,15 @@ async function loadProfit(){
     $('costOther').textContent=won(Number(f.other)||0);
     $('costCancel').textContent=won(c.cancel);
 
-    $('unitSales').textContent=won(perUnit(sales,paid));
-    $('unitFood').textContent=won(perUnit(Number(f.food)||0,paid));
+    $('unitSales').textContent=won(Math.round(perUnit(sales,paid)));
+    $('unitFood').textContent=won(Math.round(perUnit(Number(f.food)||0,paid)));
 
     // 실제 제작 1개당 용기 원가
     $('unitContainer').textContent=
-      won(Number(f.containerUnitCost)||0);
+      won(Math.round(Number(f.containerUnitCost)||0));
 
-    $('unitDirect').textContent=won(perUnit(direct,paid));
-    $('unitProfit').textContent=won(perUnit(operating,paid));
+    $('unitDirect').textContent=won(Math.round(perUnit(direct,paid)));
+    $('unitProfit').textContent=won(Math.round(perUnit(operating,paid)));
 
     $('bankIncome').textContent=won(Number(f.income)||0);
     $('bankExpense').textContent=won(Number(f.expense)||0);
