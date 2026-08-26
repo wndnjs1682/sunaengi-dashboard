@@ -1030,9 +1030,13 @@ td:first-child,th:first-child{text-align:left}
     <div class="card">
       <b>💾 백업</b>
       <p class="small">
-        Google Sheets 원본 + 수동 백업/복원.
-        엑셀 내보내기 양식은 추후 확정.
+        Supabase의 거래처·주문·입금·미수 상계·지출·설정 데이터를 한 번에 보관합니다.
       </p>
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        <button class="yellow" id="backupJsonBtn" type="button">전체 백업(JSON)</button>
+        <button id="backupExcelBtn" type="button">엑셀 백업</button>
+      </div>
+      <div class="small" id="backupState">아직 백업하지 않음</div>
     </div>
 
   </div>
@@ -1194,6 +1198,8 @@ document.querySelectorAll('.detailBtn').forEach(btn=>{
 });
 
 refreshFinance();
+$('backupJsonBtn')?.addEventListener('click',backupJson);
+$('backupExcelBtn')?.addEventListener('click',backupExcel);
 </script>
 
 <div id="liveSave" class="liveSave">☁️ 연결 중...</div>
@@ -2706,6 +2712,86 @@ function setOptionalMoney(id,value){
     el.textContent='미연동';
   }else{
     el.textContent=won(Number(value));
+  }
+}
+
+
+
+function backupFileStamp(){
+  const d=new Date();
+  const p=n=>String(n).padStart(2,'0');
+  return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'_'+p(d.getHours())+p(d.getMinutes());
+}
+
+function downloadBlob(content,type,name){
+  const blob=new Blob([content],{type});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+async function getFullBackup(){
+  await needFinance();
+  if($('backupState')) $('backupState').textContent='백업 데이터 불러오는 중...';
+  const data=await api('/api/finance?backup=1');
+  if($('backupState')){
+    const counts=data.counts||{};
+    $('backupState').textContent='백업 준비 완료 · 주문 '+(counts.orders||0)+'건 · 입금 '+(counts.payments||0)+'건 · 지출 '+(counts.expenses||0)+'건';
+  }
+  return data;
+}
+
+async function backupJson(){
+  try{
+    const data=await getFullBackup();
+    downloadBlob(JSON.stringify(data,null,2),'application/json;charset=utf-8','수냉이네_전체백업_'+backupFileStamp()+'.json');
+    if($('backupState')) $('backupState').textContent+=' · JSON 저장 완료';
+  }catch(e){
+    if($('backupState')) $('backupState').textContent='백업 실패: '+e.message;
+    alert('백업 실패: '+e.message);
+  }
+}
+
+function xmlEscape(v){
+  return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function sheetXml(name,rows){
+  const arr=Array.isArray(rows)?rows:[];
+  const keys=[...new Set(arr.flatMap(x=>Object.keys(x||{})))];
+  let out='<Worksheet ss:Name="'+xmlEscape(name.slice(0,31))+'"><Table>';
+  if(keys.length){
+    out+='<Row>'+keys.map(k=>'<Cell><Data ss:Type="String">'+xmlEscape(k)+'</Data></Cell>').join('')+'</Row>';
+    for(const r of arr){
+      out+='<Row>'+keys.map(k=>{
+        let v=r?.[k];
+        if(v!==null && typeof v==='object') v=JSON.stringify(v);
+        const num=typeof v==='number' && Number.isFinite(v);
+        return '<Cell><Data ss:Type="'+(num?'Number':'String')+'">'+xmlEscape(v)+'</Data></Cell>';
+      }).join('')+'</Row>';
+    }
+  }
+  return out+'</Table></Worksheet>';
+}
+
+async function backupExcel(){
+  try{
+    const data=await getFullBackup();
+    const tables=data.tables||{};
+    const xml='<?xml version="1.0"?><?mso-application progid="Excel.Sheet"?>'+
+      '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">'+
+      Object.entries(tables).map(([k,v])=>sheetXml(k,v)).join('')+
+      '</Workbook>';
+    downloadBlob('\ufeff'+xml,'application/vnd.ms-excel;charset=utf-8','수냉이네_전체백업_'+backupFileStamp()+'.xls');
+    if($('backupState')) $('backupState').textContent+=' · 엑셀 저장 완료';
+  }catch(e){
+    if($('backupState')) $('backupState').textContent='백업 실패: '+e.message;
+    alert('백업 실패: '+e.message);
   }
 }
 
