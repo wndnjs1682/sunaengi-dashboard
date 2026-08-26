@@ -1007,6 +1007,19 @@ td:first-child,th:first-child{text-align:left}
     </div>
 
     <div class="card">
+      <b>📦 도시락 용기 원가</b>
+      <p class="small">
+        실제 제작수량(서비스 포함) × 개당 용기 원가로 손익에 자동 반영합니다.
+      </p>
+      <div class="row">
+        <input id="containerUnitCost" type="number" min="0" step="1" value="512" style="max-width:160px">
+        <span>원/개</span>
+        <button class="yellow" id="saveContainerCostBtn" type="button">저장</button>
+      </div>
+      <div class="small" id="containerCostState">기본값 512원</div>
+    </div>
+
+    <div class="card">
       <b>☁️ 저장 방식</b>
       <p class="small">
         Google Sheets + Apps Script.
@@ -2696,6 +2709,65 @@ function setOptionalMoney(id,value){
   }
 }
 
+async function loadContainerCost(){
+  try{
+    const r=await api('/api/settings?key=container_unit_cost');
+    const value=Number(r.value)||512;
+
+    if($('containerUnitCost')){
+      $('containerUnitCost').value=value;
+    }
+
+    if($('containerCostState')){
+      $('containerCostState').textContent='현재 '+won(value)+' / 개';
+    }
+  }catch(e){
+    if($('containerCostState')){
+      $('containerCostState').textContent='불러오기 실패: '+e.message;
+    }
+  }
+}
+
+async function saveContainerCost(){
+  const value=Math.max(
+    0,
+    Math.round(Number($('containerUnitCost')?.value)||0)
+  );
+
+  if(value<=0){
+    alert('용기 원가를 확인해주세요.');
+    return;
+  }
+
+  try{
+    if($('containerCostState')){
+      $('containerCostState').textContent='저장 중...';
+    }
+
+    await api('/api/settings',{
+      method:'POST',
+      body:JSON.stringify({
+        key:'container_unit_cost',
+        value:String(value)
+      })
+    });
+
+    if($('containerCostState')){
+      $('containerCostState').textContent='저장됨 · '+won(value)+' / 개';
+    }
+
+    // 손익 화면이 열려 있으면 즉시 다시 계산
+    if(document.getElementById('profit')?.classList.contains('on')){
+      await loadProfit();
+    }
+  }catch(e){
+    if($('containerCostState')){
+      $('containerCostState').textContent='저장 실패: '+e.message;
+    }
+    alert('저장 실패: '+e.message);
+  }
+}
+
 async function loadProfit(){
   await needFinance();
 
@@ -2717,55 +2789,50 @@ async function loadProfit(){
     const c=expenseGroup(e.items||[]);
     const sales=Number(f.sales)||0;
     const paid=Number(f.paid)||0;
+    const prepared=Number(f.prepared)||0;
 
-    const direct=c.food+c.container;
-    const operating=sales-c.total;
+    // 용기 원가는 서버 계산값 사용:
+    // 실제 제작수량(prepared, 서비스 포함) × 설정된 개당 원가
+    const container=Number(f.pack)||0;
+    const direct=(Number(f.food)||0)+container;
+    const operating=Number(f.profit)||0;
 
     $('profitSales').textContent=won(sales);
-    $('profitFoodRate').textContent=pct(c.food,sales).toFixed(1)+'%';
-    $('profitFoodAmount').textContent=won(c.food);
+    $('profitFoodRate').textContent=pct(Number(f.food)||0,sales).toFixed(1)+'%';
+    $('profitFoodAmount').textContent=won(Number(f.food)||0);
     $('profitDirectRate').textContent=pct(direct,sales).toFixed(1)+'%';
     $('profitDirectAmount').textContent=won(direct)+' · 식자재+용기';
     $('profitOperating').textContent=won(operating);
     $('profitOperatingRate').textContent='이익률 '+pct(operating,sales).toFixed(1)+'%';
 
     $('costFood').textContent=
-      won(c.food)+' · '+pct(c.food,sales).toFixed(1)+'%';
+      won(Number(f.food)||0)+' · '+pct(Number(f.food)||0,sales).toFixed(1)+'%';
+
     $('costContainer').textContent=
-      won(c.container)+' · '+pct(c.container,sales).toFixed(1)+'%';
-    $('costLabor').textContent=won(c.labor);
-    $('costOther').textContent=won(c.other);
+      won(container)+' · '+pct(container,sales).toFixed(1)+'%';
+
+    $('costLabor').textContent=won(Number(f.labor)||0);
+    $('costOther').textContent=won(Number(f.other)||0);
     $('costCancel').textContent=won(c.cancel);
 
     $('unitSales').textContent=won(perUnit(sales,paid));
-    $('unitFood').textContent=won(perUnit(c.food,paid));
-    $('unitContainer').textContent=won(perUnit(c.container,paid));
+    $('unitFood').textContent=won(perUnit(Number(f.food)||0,paid));
+
+    // 실제 제작 1개당 용기 원가
+    $('unitContainer').textContent=
+      won(Number(f.containerUnitCost)||0);
+
     $('unitDirect').textContent=won(perUnit(direct,paid));
     $('unitProfit').textContent=won(perUnit(operating,paid));
 
     $('bankIncome').textContent=won(Number(f.income)||0);
-    $('bankExpense').textContent=won(c.total);
+    $('bankExpense').textContent=won(Number(f.expense)||0);
     $('bankDue').textContent=won(Number(f.receivable)||0);
 
-    setOptionalMoney(
-      'bankOpening',
-      f.openingBank ?? f.startingBank ?? f.initialBank
-    );
-
-    setOptionalMoney(
-      'bankOwner',
-      f.ownerWithdrawals ?? f.ownerWithdrawal ?? f.ownerDraw
-    );
-
-    setOptionalMoney(
-      'bankBook',
-      f.bookBalance ?? f.ledgerBalance
-    );
-
-    setOptionalMoney(
-      'bankExpected',
-      f.expectedBank
-    );
+    setOptionalMoney('bankOpening',f.opening);
+    setOptionalMoney('bankOwner',f.withdrawal);
+    setOptionalMoney('bankBook',f.bookBalance ?? f.ledgerBalance);
+    setOptionalMoney('bankExpected',f.expectedBank);
 
     saveState('☁️ 저장됨');
 
@@ -2773,7 +2840,6 @@ async function loadProfit(){
     saveState('⚠️ '+e.message);
   }
 }
-
 
 async function salesRangeClick(mode,button){
   document
@@ -3775,6 +3841,12 @@ document.addEventListener(
       $('profitEnd').value=
         today();
     }
+
+    if($('saveContainerCostBtn')){
+      $('saveContainerCostBtn').onclick=saveContainerCost;
+    }
+
+    loadContainerCost().catch(()=>{});
 
     $('histStart').value=
       today().slice(0,8)+'01';
