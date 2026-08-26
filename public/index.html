@@ -1073,6 +1073,41 @@ td:first-child,th:first-child{text-align:left}
       <div class="small" id="containerCostState">기본값 512원</div>
     </div>
 
+    <div class="card">
+      <b>💾 백업</b>
+      <p class="small">
+        Supabase의 거래처·주문·입금·미수 상계·지출·설정 데이터를 한 번에 보관합니다.
+      </p>
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        <button class="yellow" id="backupJsonBtn" type="button">전체 백업(JSON)</button>
+        <button id="backupExcelBtn" type="button">엑셀 백업</button>
+        <button id="restoreJsonBtn" type="button">선택 복구(JSON)</button>
+        <input id="restoreJsonFile" type="file" accept=".json,application/json" class="hidden">
+      </div>
+
+      <div id="restoreBox" class="hidden" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
+        <div class="small" style="margin-bottom:8px">
+          과거 백업 전체를 덮어쓰지 않습니다. 선택한 날짜 + 거래처의 주문만 복구하고 이후 데이터는 그대로 보존합니다.
+        </div>
+
+        <div class="row" style="gap:8px;flex-wrap:wrap;align-items:end">
+          <label style="min-width:150px">
+            <span class="small">복구 날짜</span>
+            <input id="restoreDate" type="date">
+          </label>
+
+          <label style="min-width:180px">
+            <span class="small">거래처</span>
+            <select id="restoreClient"></select>
+          </label>
+
+          <button class="danger" id="restoreRunBtn" type="button">이 주문 복구</button>
+          <button id="restoreCancelBtn" type="button">취소</button>
+        </div>
+
+        <div class="small" id="restoreState" style="margin-top:8px"></div>
+      </div>
+
       <div class="small" id="backupState">아직 백업하지 않음</div>
     </div>
 
