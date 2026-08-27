@@ -160,6 +160,18 @@ td:first-child,th:first-child{text-align:left}
   .month-grid{grid-template-columns:repeat(2,1fr)}
   .app{padding:6px}
 }
+
+.ops-kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+.ops-kpi>div{border:1px solid var(--line);border-radius:12px;background:#fff;padding:12px}
+.ops-kpi .v{font-size:24px;font-weight:950;margin-top:4px}
+.ops-tags{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px;margin-top:9px}
+.ops-tag{border:1px solid var(--line);background:#fff;padding:10px 6px;border-radius:10px;font-size:11px}
+.ops-tag.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.ops-menu{display:flex;justify-content:space-between;gap:10px;align-items:center;background:#f8fafc;border-radius:10px;padding:10px;margin-top:10px}
+.ops-record{display:grid;grid-template-columns:110px 1fr 2fr;gap:10px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--line)}
+.ops-pill{display:inline-block;background:#f3f4f6;border-radius:999px;padding:4px 7px;font-size:10px;margin:2px}
+@media(max-width:900px){.ops-kpi{grid-template-columns:repeat(2,1fr)}.ops-tags{grid-template-columns:repeat(3,1fr)}.ops-record{grid-template-columns:1fr}.ops-menu{align-items:flex-start;flex-direction:column}}
+
 </style>
 </head>
 
@@ -757,39 +769,96 @@ td:first-child,th:first-child{text-align:left}
 <section class="page" id="history">
 
   <div class="section card">
-    <div class="filter">
-      <label>
-        시작일<br>
-        <input id="histStart" type="date">
-      </label>
-
-      <label>
-        종료일<br>
-        <input id="histEnd" type="date">
-      </label>
-
-      <button class="navy" id="histQueryBtn">조회</button>
+    <div class="section-title">
+      <div>
+        <b>📚 오늘 운영 기록</b>
+        <div class="small">주문 수량은 자동 집계 · 상태는 여러 개 선택 가능</div>
+      </div>
+      <button class="yellow" id="saveOpsBtn">✓ 운영기록 저장</button>
     </div>
+
+    <div class="ops-kpi">
+      <div><div class="small">오늘 제작</div><div class="v" id="opsPrepared">0</div><div class="small">개</div></div>
+      <div><div class="small">유료</div><div class="v" id="opsPaid">0</div><div class="small">개</div></div>
+      <div><div class="small">서비스</div><div class="v" id="opsService">0</div><div class="small">개</div></div>
+      <div><div class="small">거래처</div><div class="v" id="opsClients">0</div><div class="small">척</div></div>
+    </div>
+
+    <div>
+      <b>오늘 운영 상태</b>
+      <div class="small">정상은 단독 선택 · 나머지는 중복 선택 가능</div>
+      <div class="ops-tags" id="opsTags">
+        <button class="ops-tag on" data-opstag="정상">🟢 정상</button>
+        <button class="ops-tag" data-opstag="출항취소">🌊 출항취소</button>
+        <button class="ops-tag" data-opstag="날씨영향">🌧 날씨영향</button>
+        <button class="ops-tag" data-opstag="작업지연">⏱ 작업지연</button>
+        <button class="ops-tag" data-opstag="거래처변동">🚢 거래처변동</button>
+        <button class="ops-tag" data-opstag="재고부족">📦 재고부족</button>
+        <button class="ops-tag" data-opstag="메뉴이슈">🍱 메뉴이슈</button>
+        <button class="ops-tag" data-opstag="인력변동">👥 인력변동</button>
+        <button class="ops-tag" data-opstag="배송지연">🚚 배송지연</button>
+        <button class="ops-tag" data-opstag="주문폭증">🔥 주문폭증</button>
+        <button class="ops-tag" data-opstag="폐기발생">🗑️ 폐기발생</button>
+      </div>
+    </div>
+
+    <div id="opsWasteBox" class="card hidden" style="margin-top:10px;background:#f8fafc">
+      <b>🗑️ 폐기 기록</b>
+      <div class="expense-grid" style="margin-top:8px">
+        <label>품목<br><input id="opsWasteItem" placeholder="예: 냉국"></label>
+        <label>수량<br><input id="opsWasteQty" type="number" min="0" placeholder="0"></label>
+        <label>사유<br>
+          <select id="opsWasteReason">
+            <option>출항취소</option><option>과다생산</option><option>조리실패</option><option>품질저하</option><option>기타</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
+    <div class="ops-menu">
+      <div>
+        <div class="small">오늘 메뉴</div>
+        <b id="opsMenuSummary">메뉴를 입력해 주세요</b>
+      </div>
+      <button id="opsMenuToggle">수정</button>
+    </div>
+
+    <div id="opsMenuEdit" class="expense-grid hidden" style="margin-top:8px">
+      <input class="ops-menu-input" placeholder="메뉴 1">
+      <input class="ops-menu-input" placeholder="메뉴 2">
+      <input class="ops-menu-input" placeholder="메뉴 3">
+      <input class="ops-menu-input" placeholder="국/기타">
+    </div>
+
+    <div style="margin-top:10px">
+      <label><b>한줄 기록</b><br>
+        <div style="display:flex;gap:7px;margin-top:5px">
+          <input id="opsMemo" style="flex:1" placeholder="예: 강풍으로 3척 취소 · 냉국 20개 폐기">
+        </div>
+      </label>
+    </div>
+
+    <details class="card" style="margin-top:10px">
+      <summary style="cursor:pointer"><b>상세 기록 +</b></summary>
+      <div class="expense-grid" style="margin-top:10px">
+        <label>작업 시작<br><input id="opsStart" type="time"></label>
+        <label>작업 종료<br><input id="opsEnd" type="time"></label>
+        <label>작업 인원<br><input id="opsWorkers" type="number" min="1"></label>
+      </div>
+    </details>
   </div>
 
   <div class="section card">
-    <b>📚 운영 기록</b>
-
-    <div class="scroll" style="margin-top:8px">
-      <table>
-        <thead>
-          <tr>
-            <th>날짜</th>
-            <th>구분</th>
-            <th>거래처/항목</th>
-            <th>수량/금액</th>
-            <th>메모</th>
-          </tr>
-        </thead>
-
-        <tbody id="historyRows"></tbody>
-      </table>
+    <div class="section-title">
+      <div><b>최근 운영기록</b><div class="small">날짜별 태그 + 한줄 기록</div></div>
+      <div class="filter">
+        <label>시작일<br><input id="histStart" type="date"></label>
+        <label>종료일<br><input id="histEnd" type="date"></label>
+        <button class="navy" id="histQueryBtn">조회</button>
+      </div>
     </div>
+    <div id="opsRecent"></div>
+    <div class="scroll hidden"><table><tbody id="historyRows"></tbody></table></div>
   </div>
 
   <details class="section card">
@@ -803,6 +872,7 @@ td:first-child,th:first-child{text-align:left}
 
     <div class="achievement-grid" id="achievementGrid"></div>
   </details>
+
 
 </section>
 
@@ -4691,6 +4761,46 @@ if($('cmTaxOn')){
     }
   });
 }
+
+function initOpsUI(){
+  const tags=[...document.querySelectorAll('[data-opstag]')];
+  if(!tags.length)return;
+  const selected=new Set(['정상']);
+
+  const paint=()=>{
+    tags.forEach(b=>b.classList.toggle('on',selected.has(b.dataset.opstag)));
+    $('opsWasteBox')?.classList.toggle('hidden',!selected.has('폐기발생'));
+  };
+
+  tags.forEach(b=>b.onclick=()=>{
+    const t=b.dataset.opstag;
+    if(t==='정상'){
+      selected.clear(); selected.add('정상');
+    }else{
+      selected.delete('정상');
+      selected.has(t)?selected.delete(t):selected.add(t);
+      if(!selected.size)selected.add('정상');
+    }
+    paint();
+  });
+
+  $('opsMenuToggle').onclick=()=>{
+    $('opsMenuEdit').classList.toggle('hidden');
+  };
+
+  document.querySelectorAll('.ops-menu-input').forEach(x=>x.addEventListener('input',()=>{
+    const vals=[...document.querySelectorAll('.ops-menu-input')].map(i=>i.value.trim()).filter(Boolean);
+    $('opsMenuSummary').textContent=vals.length?vals.join(' · '):'메뉴를 입력해 주세요';
+  }));
+
+  $('saveOpsBtn').onclick=()=>{
+    alert('운영기록 화면 구성은 완료되었습니다. 실제 저장은 운영기록 API/DB 연결 후 활성화됩니다.');
+  };
+  paint();
+}
+
+
+setTimeout(initOpsUI,0);
 </script>
 
 </body>
