@@ -194,6 +194,12 @@ td:first-child,th:first-child{text-align:left}
 .manual-lock-btn.locked{background:#eef4ff;border-color:#c7d2fe;color:#1e3a8a}
 .manual-change{display:inline-block;margin-top:4px;font-size:10px;color:#b45309;font-weight:800}
 
+
+.manual-editor{position:fixed;z-index:9999;width:min(360px,calc(100vw - 24px));background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 18px 50px rgba(15,23,42,.20);padding:14px}
+.manual-editor.hidden{display:none}.manual-editor-head{display:flex;justify-content:space-between;gap:8px;margin-bottom:10px}
+.manual-editor-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.manual-editor-grid label{font-size:11px;font-weight:800}
+.manual-editor-grid input{width:100%;margin-top:4px;text-align:center;font-weight:900}.manual-paid-preview{margin-top:10px;background:#f8fafc;border-radius:10px;padding:10px;font-size:12px}
+.manual-editor-actions{display:flex;justify-content:flex-end;gap:7px;margin-top:10px}@media(max-width:520px){.manual-editor-grid{grid-template-columns:1fr}}
 </style>
 </head>
 
@@ -409,7 +415,7 @@ td:first-child,th:first-child{text-align:left}
     </div>
 
     <div class="notice">
-      현재 숫자를 직접 수정하면 수기잠금됩니다. 예약현황 전체 확인을 다시 해도 잠금값은 유지되고 자동예약 변동만 표시됩니다.
+      현재 숫자를 누르면 예약인원·총 도시락·서비스를 직접 입력할 수 있습니다. 수기 저장 후 전체 예약조회를 다시 해도 잠금값은 유지됩니다.
       거래중지 거래처는 숨김.
     </div>
 
@@ -1081,7 +1087,7 @@ td:first-child,th:first-child{text-align:left}
           </div>
         </summary>
         <div class="setting-body">
-          <p class="small">기본 서비스 수량을 설정합니다. 거래처별 예외는 거래처 관리에서 별도 적용합니다.</p>
+          <p class="small">기본 서비스 수량을 설정합니다. 예외가 있는 날은 예약 화면에서 수기로 덮어씁니다.</p>
           <div class="list" style="margin-top:9px">
             <div class="row"><span>2개 서비스 기준</span><input id="serviceTwoMin" type="number" min="0" step="1" value="22" style="max-width:100px"><span>개 이상</span></div>
             <div class="row"><span>1개 서비스 기준</span><input id="serviceOneMin" type="number" min="0" step="1" value="11" style="max-width:100px"><span>개 이상</span></div>
@@ -2068,7 +2074,28 @@ function rowHtml(r,i){
         }
       </td>
 
-      <td><div class="current-edit-wrap"><button class="current-edit" style="cursor:pointer" onclick="openManualOrder(${i})" title="수기 입력">${cur??'-'}</button><button class="manual-lock-btn ${lock?'locked':''}" onclick="${lock?`unlockManualOrder(${i})`:`openManualOrder(${i})`}" title="${lock?'자동조회로 복귀':'수기 입력'}">${lock?'🔒 수기':'자동'}</button></div></td>
+      <td>
+        <div class="current-edit-wrap">
+          <input
+            id="currentInput${i}"
+            class="current-edit"
+            type="number"
+            readonly
+            min="0"
+            max="${r.guest_max}"
+            value="${cur??''}"
+            onclick="openManualEditor(${i},this)"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();openManualEditor(${i},this)}"
+          >
+          <button
+            class="manual-lock-btn ${lock?'locked':''}"
+            onclick="toggleManualLock(${i})"
+            title="${lock?'수기잠금 해제':'현재값을 수기잠금'}"
+          >
+            ${lock?'🔒 수기':'자동'}
+          </button>
+        </div>
+      </td>
 
       <td class="lunch" id="lunch${i}">
         <b>${prepared}개</b>
@@ -2118,7 +2145,6 @@ function rowHtml(r,i){
 
       <td>
         <div class="quick">
-          
           <button onclick="quick(${i},'출항없음')">출항없음</button>
         </div>
       </td>
@@ -2128,70 +2154,77 @@ function rowHtml(r,i){
   `;
 }
 
-function previewManualCalc(r,reservation){
-  const prepared=Math.max(
-    0,
-    Number(reservation||0)
-    +(r.captain_meal?1:0)
-    +(r.manager_meal?1:0)
-  );
-
-  /*
-    거래처별 서비스 규칙이 있으면 우선 적용.
-    없으면 현재 기본 규칙(22→2 / 11→1)을 사용한다.
-  */
-  const local=readClientServiceLocal(r.id);
-  const mode=r.service_mode||local?.service_mode||'default';
-
-  let service=0;
-
-  if(mode==='none'){
-    service=0;
-  }else if(mode==='custom'){
-    const two=Number(r.service_two_min??local?.service_two_min??22);
-    const one=Number(r.service_one_min??local?.service_one_min??11);
-    service=prepared>=two?2:(prepared>=one?1:0);
-  }else{
-    const cfg=getServiceConfigFromInputs();
-    service=prepared>=cfg.twoMin?2:(prepared>=cfg.oneMin?1:0);
-  }
-
-  return {
-    prepared,
-    service,
-    paid:Math.max(0,prepared-service)
-  };
+function previewManualCalc(r,reservation,preparedOverride=null,serviceOverride=null){
+  const crew=(r.captain_meal?1:0)+(r.manager_meal?1:0);
+  const autoPrepared=Math.max(0,Number(reservation||0)+crew);
+  const cfg=getServiceConfigFromInputs();
+  const autoService=autoPrepared>=cfg.twoMin?2:(autoPrepared>=cfg.oneMin?1:0);
+  const prepared=preparedOverride===null?autoPrepared:Math.max(0,Number(preparedOverride)||0);
+  const service=serviceOverride===null?autoService:Math.max(0,Math.min(prepared,Number(serviceOverride)||0));
+  return {prepared,service,paid:Math.max(0,prepared-service)};
 }
 
-let MANUAL_ORDER_INDEX=null;
-function manualOrderRecalc(){
-  const prepared=Math.max(0,Number($('moPrepared')?.value)||0);
-  let service=Math.max(0,Number($('moService')?.value)||0);
-  if(service>prepared){service=prepared;$('moService').value=prepared;}
-  $('moPaid').value=Math.max(0,prepared-service);
+let MANUAL_EDIT_INDEX=null;
+
+function ensureManualEditor(){
+  if($('manualEditor'))return;
+  const box=document.createElement('div');
+  box.id='manualEditor'; box.className='manual-editor hidden';
+  box.innerHTML=`
+    <div class="manual-editor-head"><div><b id="manualEditorTitle">수기 입력</b><div class="small">필요한 값만 바꾸세요.</div></div><button onclick="closeManualEditor()">✕</button></div>
+    <div class="manual-editor-grid">
+      <label>예약인원<input id="manualReservation" type="number" min="0"></label>
+      <label>총 도시락<input id="manualPrepared" type="number" min="0"></label>
+      <label>서비스<input id="manualService" type="number" min="0"></label>
+    </div>
+    <div class="manual-paid-preview">유료수량 <b id="manualPaid">0개</b><span class="small"> · 총 도시락 - 서비스</span></div>
+    <div class="manual-editor-actions"><button onclick="closeManualEditor()">취소</button><button class="navy" onclick="commitManualEditor()">🔒 수기 저장</button></div>`;
+  document.body.appendChild(box);
+  ['manualPrepared','manualService'].forEach(id=>$(id).addEventListener('input',refreshManualPaid));
 }
-function openManualOrder(i){
-  const r=APP.rows[i]; if(!r)return; MANUAL_ORDER_INDEX=i;
+function refreshManualPaid(){
+  const p=Math.max(0,Number($('manualPrepared')?.value)||0);
+  let s=Math.max(0,Number($('manualService')?.value)||0);
+  if(s>p){s=p;$('manualService').value=s}
+  $('manualPaid').textContent=(p-s)+'개';
+}
+function openManualEditor(i,anchor){
+  ensureManualEditor(); const r=APP.rows[i]; if(!r)return; MANUAL_EDIT_INDEX=i;
   const lock=readManualLock(APP.date,r.id);
-  const reservation=lock?Number(lock.reservation):Math.max(0,Number(r.order?.reservation)||0);
-  const q=previewManualCalc(r,reservation);
-  $('manualOrderTitle').textContent=`🔒 ${r.name} 수기 입력`;
-  $('moReservation').value=reservation;
-  $('moPrepared').value=lock?.prepared??q.prepared;
-  $('moService').value=lock?.service??q.service;
-  manualOrderRecalc(); $('manualOrderModal').classList.remove('hidden');
+  const reservation=lock?Number(lock.reservation):Number(r.order?.reservation??0);
+  const auto=previewManualCalc(r,reservation);
+  $('manualEditorTitle').textContent=r.name+' 수기 입력';
+  $('manualReservation').value=reservation;
+  $('manualPrepared').value=lock?.prepared??auto.prepared;
+  $('manualService').value=lock?.service??auto.service;
+  refreshManualPaid();
+  const box=$('manualEditor'), rect=(anchor||document.body).getBoundingClientRect();
+  box.classList.remove('hidden');
+  const w=Math.min(360,window.innerWidth-24);
+  box.style.width=w+'px'; box.style.left=Math.min(window.innerWidth-w-12,Math.max(12,rect.left))+'px';
+  box.style.top=Math.min(window.innerHeight-250,Math.max(12,rect.bottom+6))+'px';
 }
-function closeManualOrder(){$('manualOrderModal')?.classList.add('hidden');MANUAL_ORDER_INDEX=null;}
-async function saveManualOrderOverride(){
-  const i=MANUAL_ORDER_INDEX,r=APP.rows[i]; if(!r)return;
-  const reservation=Math.max(0,Number($('moReservation').value)||0);
-  const prepared=Math.max(0,Number($('moPrepared').value)||0);
-  const service=Math.min(prepared,Math.max(0,Number($('moService').value)||0));
-  const paid=Math.max(0,prepared-service);
+function closeManualEditor(){if($('manualEditor'))$('manualEditor').classList.add('hidden');MANUAL_EDIT_INDEX=null}
+async function commitManualEditor(){
+  const i=MANUAL_EDIT_INDEX,r=APP.rows[i]; if(!r)return;
+  const reservation=Math.max(0,Number($('manualReservation').value)||0);
+  const prepared=Math.max(0,Number($('manualPrepared').value)||0);
+  const service=Math.max(0,Math.min(prepared,Number($('manualService').value)||0));
+  const paid=prepared-service;
   writeManualLock(APP.date,r.id,{reservation,prepared,service,paid,locked_at:new Date().toISOString()});
-  try{await api('/api/order',{method:'POST',body:JSON.stringify({date:APP.date,client_id:r.id,reservation,prepared,paid,service,status:'수기확정',confirm_method:'수기잠금'})});closeManualOrder();saveState(`🔒 ${r.name} 수기확정 · 예약 ${reservation} · 도시락 ${prepared} · 서비스 ${service} · 유료 ${paid}`);await loadDay();}catch(e){saveState('⚠️ '+e.message);}
+  try{
+    await api('/api/order',{method:'POST',body:JSON.stringify({date:APP.date,client_id:r.id,reservation,prepared,service,paid,status:'수기확정',confirm_method:'수기잠금'})});
+    saveState(`🔒 ${r.name} · 예약 ${reservation} · 도시락 ${prepared} · 서비스 ${service} · 유료 ${paid}`);
+    closeManualEditor(); await loadDay();
+  }catch(e){saveState('⚠️ '+e.message)}
 }
-async function unlockManualOrder(i){const r=APP.rows[i];if(!r)return;clearManualLock(APP.date,r.id);saveState(`🔓 ${r.name} 자동조회로 복귀`);await loadDay();}
+async function saveManualCurrent(i){openManualEditor(i,$('currentInput'+i));}
+
+async function toggleManualLock(i){
+  const r=APP.rows[i],lock=readManualLock(APP.date,r.id);
+  if(lock){clearManualLock(APP.date,r.id);saveState(`🔓 ${r.name} 자동조회로 복귀`);await loadDay();return}
+  openManualEditor(i,$('currentInput'+i));
+}
 
 async function quick(i,status){
 
@@ -2251,8 +2284,26 @@ async function scanAll(){
       );
 
     for(const x of lockedRows){
-      await api('/api/order',{method:'POST',body:JSON.stringify({date:APP.date,client_id:x.r.id,reservation:Number(x.lock.reservation)||0,prepared:Number(x.lock.prepared)||0,paid:Number(x.lock.paid)||0,service:Number(x.lock.service)||0,status:'수기확정',confirm_method:'수기잠금'})});
-      writeManualLock(APP.date,x.r.id,x.lock);
+      const q=previewManualCalc(x.r,Number(x.lock.reservation));
+      await api('/api/order',{
+        method:'POST',
+        body:JSON.stringify({
+          date:APP.date,
+          client_id:x.r.id,
+          reservation:Number(x.lock.reservation),
+          prepared:Number(x.lock.prepared??q.prepared),
+          service:Number(x.lock.service??q.service),
+          paid:Number(x.lock.paid??q.paid),
+          status:'수기확정',
+          confirm_method:'수기잠금'
+        })
+      });
+      writeManualLock(APP.date,x.r.id,{
+        ...x.lock,
+        prepared:Number(x.lock.prepared??q.prepared),
+        paid:Number(x.lock.paid??q.paid),
+        service:Number(x.lock.service??q.service)
+      });
     }
 
     const bad=
@@ -2651,11 +2702,6 @@ function openClient(id){
       !!c.manager_meal
     );
 
-  const serviceLocal=readClientServiceLocal(id)||{};
-  $('cmServiceMode').value=c.service_mode||serviceLocal.service_mode||'default';
-  $('cmServiceTwoMin').value=Number(c.service_two_min??serviceLocal.service_two_min??22);
-  $('cmServiceOneMin').value=Number(c.service_one_min??serviceLocal.service_one_min??11);
-  refreshClientServiceCustomBox();
   refreshClientCalcPreview();
 
   $('clientModal')
@@ -2741,13 +2787,13 @@ async function saveClient(){
       $('cmManagerMeal').value==='true',
 
     service_mode:
-      $('cmServiceMode').value||'default',
+      'default',
 
     service_two_min:
-      Number($('cmServiceTwoMin').value)||22,
+      22,
 
     service_one_min:
-      Number($('cmServiceOneMin').value)||11
+      11
   };
 
   await api(
@@ -2757,12 +2803,6 @@ async function saveClient(){
       body:JSON.stringify(b)
     }
   );
-
-  writeClientServiceLocal(APP.editingClient,{
-    service_mode:b.service_mode,
-    service_two_min:b.service_two_min,
-    service_one_min:b.service_one_min
-  });
 
   /*
     현재 clients API가 tax_group을 영구 저장하지 못하는 경우를 대비한
@@ -4449,10 +4489,6 @@ document.addEventListener(
       $('saveSeasonGoalBtn').onclick=saveSeasonGoal;
     }
 
-    if($('cmServiceMode')){
-      $('cmServiceMode').onchange=refreshClientServiceCustomBox;
-    }
-
     ['cmCapacity','cmCaptainOn','cmCaptainMeal','cmManagerOn','cmManagerMeal','cmPreviewGuest']
       .forEach(id=>{
         const el=$(id);
@@ -4831,9 +4867,7 @@ function initOpsUI(){
 
 
 setTimeout(initOpsUI,0);
-\ndocument.addEventListener('DOMContentLoaded',()=>{\n ['moPrepared','moService'].forEach(id=>{const el=$(id);if(el)el.addEventListener('input',manualOrderRecalc);});\n const rr=$('moReservation');if(rr)rr.addEventListener('input',()=>{if(MANUAL_ORDER_INDEX==null)return;const r=APP.rows[MANUAL_ORDER_INDEX],q=previewManualCalc(r,Math.max(0,Number(rr.value)||0));$('moPrepared').value=q.prepared;$('moService').value=q.service;manualOrderRecalc();});\n const m=$('manualOrderModal');if(m)m.addEventListener('click',e=>{if(e.target===m)closeManualOrder();});\n});\n</script>
+</script>
 
-
-<div id="manualOrderModal" class="modal hidden"><div class="modal-box" style="max-width:520px"><div class="section-title"><div><b id="manualOrderTitle">🔒 수기 입력</b><div class="small">자동 추천값을 확인하고 필요한 값만 수정하세요.</div></div><button onclick="closeManualOrder()">✕</button></div><div class="expense-grid" style="margin-top:10px"><label>예약인원<br><input id="moReservation" type="number" min="0"></label><label>총 도시락<br><input id="moPrepared" type="number" min="0"></label><label>서비스<br><input id="moService" type="number" min="0"></label><label>유료 <span class="small">(자동)</span><br><input id="moPaid" type="number" readonly></label></div><div class="notice" style="margin-top:10px">유료수량 = 총 도시락 - 서비스</div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><button onclick="closeManualOrder()">취소</button><button class="navy" onclick="saveManualOrderOverride()">✓ 수기확정</button></div></div></div>
 </body>
 </html>
