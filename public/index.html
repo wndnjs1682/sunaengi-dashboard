@@ -1043,29 +1043,7 @@ td:first-child,th:first-child{text-align:left}
         </div>
       </div>
 
-      <details class="client-edit-section client-special">
-        <summary class="client-edit-head">
-          <b>⭐ 특수설정</b>
-          <div class="client-help">일반 거래처는 건드리지 않아도 됩니다</div>
-        </summary>
-        <div class="client-edit-body">
-          <label>서비스 적용<br>
-            <select id="cmServiceMode">
-              <option value="default">기본 규칙</option>
-              <option value="none">서비스 없음</option>
-              <option value="custom">직접 설정</option>
-            </select>
-          </label>
-
-          <div id="cmServiceCustomBox" class="hidden" style="margin-top:10px">
-            <div class="notice" style="margin-bottom:8px">이 거래처만 별도 서비스 기준을 사용합니다.</div>
-            <div class="client-edit-grid">
-              <label>2개 서비스 기준<br><input id="cmServiceTwoMin" type="number" min="1" step="1" value="22"></label>
-              <label>1개 서비스 기준<br><input id="cmServiceOneMin" type="number" min="1" step="1" value="11"></label>
-            </div>
-          </div>
-        </div>
-      </details>
+      
 
 <div style="margin-top:12px">
         <button class="yellow" id="saveClientBtn">저장</button>
@@ -2090,27 +2068,7 @@ function rowHtml(r,i){
         }
       </td>
 
-      <td>
-        <div class="current-edit-wrap">
-          <input
-            id="currentInput${i}"
-            class="current-edit"
-            type="number"
-            min="0"
-            max="${r.guest_max}"
-            value="${cur??''}"
-            onchange="saveManualCurrent(${i})"
-            onkeydown="if(event.key==='Enter'){this.blur()}"
-          >
-          <button
-            class="manual-lock-btn ${lock?'locked':''}"
-            onclick="toggleManualLock(${i})"
-            title="${lock?'수기잠금 해제':'현재값을 수기잠금'}"
-          >
-            ${lock?'🔒 수기':'자동'}
-          </button>
-        </div>
-      </td>
+      <td><div class="current-edit-wrap"><button class="current-edit" style="cursor:pointer" onclick="openManualOrder(${i})" title="수기 입력">${cur??'-'}</button><button class="manual-lock-btn ${lock?'locked':''}" onclick="${lock?`unlockManualOrder(${i})`:`openManualOrder(${i})`}" title="${lock?'자동조회로 복귀':'수기 입력'}">${lock?'🔒 수기':'자동'}</button></div></td>
 
       <td class="lunch" id="lunch${i}">
         <b>${prepared}개</b>
@@ -2160,7 +2118,7 @@ function rowHtml(r,i){
 
       <td>
         <div class="quick">
-          <button onclick="quick(${i},'예약마감')">예약마감</button>
+          
           <button onclick="quick(${i},'출항없음')">출항없음</button>
         </div>
       </td>
@@ -2205,66 +2163,35 @@ function previewManualCalc(r,reservation){
   };
 }
 
-async function saveManualCurrent(i){
-
-  const r=APP.rows[i];
-  const input=$('currentInput'+i);
-
-  if(!r||!input)return;
-
-  const reservation=Math.max(0,Number(input.value)||0);
-  const q=previewManualCalc(r,reservation);
-
-  /*
-    먼저 잠금 정보를 남겨 전체 자동조회가 실행되어도
-    화면상 최종 확정값을 복구할 수 있게 한다.
-  */
-  writeManualLock(APP.date,r.id,{
-    reservation,
-    prepared:q.prepared,
-    paid:q.paid,
-    service:q.service,
-    locked_at:new Date().toISOString()
-  });
-
-  try{
-    await api('/api/order',{
-      method:'POST',
-      body:JSON.stringify({
-        date:APP.date,
-        client_id:r.id,
-        reservation,
-        service:q.service,
-        status:'수기확정',
-        confirm_method:'수기잠금'
-      })
-    });
-
-    saveState(
-      `🔒 ${r.name} ${reservation}명 수기잠금 · 제작 ${q.prepared} · 유료 ${q.paid} · 서비스 ${q.service}`
-    );
-
-    await loadDay();
-
-  }catch(e){
-    saveState('⚠️ '+e.message);
-  }
+let MANUAL_ORDER_INDEX=null;
+function manualOrderRecalc(){
+  const prepared=Math.max(0,Number($('moPrepared')?.value)||0);
+  let service=Math.max(0,Number($('moService')?.value)||0);
+  if(service>prepared){service=prepared;$('moService').value=prepared;}
+  $('moPaid').value=Math.max(0,prepared-service);
 }
-
-async function toggleManualLock(i){
-
-  const r=APP.rows[i];
+function openManualOrder(i){
+  const r=APP.rows[i]; if(!r)return; MANUAL_ORDER_INDEX=i;
   const lock=readManualLock(APP.date,r.id);
-
-  if(lock){
-    clearManualLock(APP.date,r.id);
-    saveState(`🔓 ${r.name} 자동조회로 복귀`);
-    await loadDay();
-    return;
-  }
-
-  await saveManualCurrent(i);
+  const reservation=lock?Number(lock.reservation):Math.max(0,Number(r.order?.reservation)||0);
+  const q=previewManualCalc(r,reservation);
+  $('manualOrderTitle').textContent=`🔒 ${r.name} 수기 입력`;
+  $('moReservation').value=reservation;
+  $('moPrepared').value=lock?.prepared??q.prepared;
+  $('moService').value=lock?.service??q.service;
+  manualOrderRecalc(); $('manualOrderModal').classList.remove('hidden');
 }
+function closeManualOrder(){$('manualOrderModal')?.classList.add('hidden');MANUAL_ORDER_INDEX=null;}
+async function saveManualOrderOverride(){
+  const i=MANUAL_ORDER_INDEX,r=APP.rows[i]; if(!r)return;
+  const reservation=Math.max(0,Number($('moReservation').value)||0);
+  const prepared=Math.max(0,Number($('moPrepared').value)||0);
+  const service=Math.min(prepared,Math.max(0,Number($('moService').value)||0));
+  const paid=Math.max(0,prepared-service);
+  writeManualLock(APP.date,r.id,{reservation,prepared,service,paid,locked_at:new Date().toISOString()});
+  try{await api('/api/order',{method:'POST',body:JSON.stringify({date:APP.date,client_id:r.id,reservation,prepared,paid,service,status:'수기확정',confirm_method:'수기잠금'})});closeManualOrder();saveState(`🔒 ${r.name} 수기확정 · 예약 ${reservation} · 도시락 ${prepared} · 서비스 ${service} · 유료 ${paid}`);await loadDay();}catch(e){saveState('⚠️ '+e.message);}
+}
+async function unlockManualOrder(i){const r=APP.rows[i];if(!r)return;clearManualLock(APP.date,r.id);saveState(`🔓 ${r.name} 자동조회로 복귀`);await loadDay();}
 
 async function quick(i,status){
 
@@ -2324,24 +2251,8 @@ async function scanAll(){
       );
 
     for(const x of lockedRows){
-      const q=previewManualCalc(x.r,Number(x.lock.reservation));
-      await api('/api/order',{
-        method:'POST',
-        body:JSON.stringify({
-          date:APP.date,
-          client_id:x.r.id,
-          reservation:Number(x.lock.reservation),
-          service:q.service,
-          status:'수기확정',
-          confirm_method:'수기잠금'
-        })
-      });
-      writeManualLock(APP.date,x.r.id,{
-        ...x.lock,
-        prepared:q.prepared,
-        paid:q.paid,
-        service:q.service
-      });
+      await api('/api/order',{method:'POST',body:JSON.stringify({date:APP.date,client_id:x.r.id,reservation:Number(x.lock.reservation)||0,prepared:Number(x.lock.prepared)||0,paid:Number(x.lock.paid)||0,service:Number(x.lock.service)||0,status:'수기확정',confirm_method:'수기잠금'})});
+      writeManualLock(APP.date,x.r.id,x.lock);
     }
 
     const bad=
@@ -4920,7 +4831,9 @@ function initOpsUI(){
 
 
 setTimeout(initOpsUI,0);
-</script>
+\ndocument.addEventListener('DOMContentLoaded',()=>{\n ['moPrepared','moService'].forEach(id=>{const el=$(id);if(el)el.addEventListener('input',manualOrderRecalc);});\n const rr=$('moReservation');if(rr)rr.addEventListener('input',()=>{if(MANUAL_ORDER_INDEX==null)return;const r=APP.rows[MANUAL_ORDER_INDEX],q=previewManualCalc(r,Math.max(0,Number(rr.value)||0));$('moPrepared').value=q.prepared;$('moService').value=q.service;manualOrderRecalc();});\n const m=$('manualOrderModal');if(m)m.addEventListener('click',e=>{if(e.target===m)closeManualOrder();});\n});\n</script>
 
+
+<div id="manualOrderModal" class="modal hidden"><div class="modal-box" style="max-width:520px"><div class="section-title"><div><b id="manualOrderTitle">🔒 수기 입력</b><div class="small">자동 추천값을 확인하고 필요한 값만 수정하세요.</div></div><button onclick="closeManualOrder()">✕</button></div><div class="expense-grid" style="margin-top:10px"><label>예약인원<br><input id="moReservation" type="number" min="0"></label><label>총 도시락<br><input id="moPrepared" type="number" min="0"></label><label>서비스<br><input id="moService" type="number" min="0"></label><label>유료 <span class="small">(자동)</span><br><input id="moPaid" type="number" readonly></label></div><div class="notice" style="margin-top:10px">유료수량 = 총 도시락 - 서비스</div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><button onclick="closeManualOrder()">취소</button><button class="navy" onclick="saveManualOrderOverride()">✓ 수기확정</button></div></div></div>
 </body>
 </html>
