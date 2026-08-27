@@ -510,7 +510,18 @@ td:first-child,th:first-child{text-align:left}
       <button class="navy" id="addExpenseBtn">+ 지출 추가</button>
     </div>
 
-    <div id="expenseForm" class="card hidden">
+    <div id="expenseForm" class="card hidden" style="border:2px solid #dbe4ef;background:#fbfdff">
+      <div class="section-title" style="margin-bottom:12px">
+        <div>
+          <b id="expenseFormTitle">➕ 지출 입력</b>
+          <div class="small">내용을 입력한 뒤 오른쪽 저장 버튼을 누르세요.</div>
+        </div>
+        <div style="display:flex;gap:7px">
+          <button id="cancelExpenseBtn">취소</button>
+          <button class="yellow" id="saveExpenseBtn">✓ 지출 저장</button>
+        </div>
+      </div>
+
       <div class="expense-extra">
 
         <label>
@@ -531,12 +542,16 @@ td:first-child,th:first-child{text-align:left}
 
         <label>
           항목<br>
-          <input id="exItem" placeholder="예: 전기공사">
+          <input id="exItem" placeholder="예: 주유, 마트, 전기공사">
         </label>
 
         <label>
           금액<br>
-          <input id="exAmount">
+          <div style="display:flex;align-items:center;gap:6px">
+            <input id="exAmount" inputmode="numeric" autocomplete="off" placeholder="0" style="width:100%">
+            <b>원</b>
+          </div>
+          <div class="small" id="exAmountPreview" style="margin-top:4px">0원</div>
         </label>
 
         <label>
@@ -544,11 +559,6 @@ td:first-child,th:first-child{text-align:left}
           <input id="exMemo">
         </label>
 
-      </div>
-
-      <div style="margin-top:8px">
-        <button class="yellow" id="saveExpenseBtn">저장</button>
-        <button id="cancelExpenseBtn">취소</button>
       </div>
     </div>
 
@@ -3904,6 +3914,40 @@ function filterExpenseGroups(type,btn){
   });
 }
 
+function parseMoneyInput(v){
+  const cleaned=String(v??'').replace(/[^\d-]/g,'');
+  const n=Number(cleaned);
+  return Number.isFinite(n)?n:0;
+}
+
+function formatMoneyInput(v){
+  const n=parseMoneyInput(v);
+  return n ? n.toLocaleString('ko-KR') : '';
+}
+
+function refreshExpenseAmountPreview(){
+  const el=$('exAmount');
+  const preview=$('exAmountPreview');
+  if(!el)return;
+
+  const n=parseMoneyInput(el.value);
+  el.value=n ? n.toLocaleString('ko-KR') : '';
+
+  if(preview){
+    preview.textContent=(n||0).toLocaleString('ko-KR')+'원';
+  }
+}
+
+function setExpenseFormOpen(open,mode='add'){
+  $('expenseForm')?.classList.toggle('hidden',!open);
+  $('addExpenseBtn')?.classList.toggle('hidden',open);
+
+  if($('expenseFormTitle')){
+    $('expenseFormTitle').textContent=
+      mode==='edit' ? '✏️ 지출 수정' : '➕ 지출 입력';
+  }
+}
+
 function editExpense(raw){
 
   const x=
@@ -3912,9 +3956,7 @@ function editExpense(raw){
   APP.editingExpense=
     x.id;
 
-  $('expenseForm')
-    .classList
-    .remove('hidden');
+  setExpenseFormOpen(true,'edit');
 
   $('exDate').value=
     x.expense_date;
@@ -3926,7 +3968,9 @@ function editExpense(raw){
     x.item||'';
 
   $('exAmount').value=
-    x.amount;
+    (Number(x.amount)||0).toLocaleString('ko-KR');
+
+  refreshExpenseAmountPreview();
 
   $('exMemo').value=
     x.memo||'';
@@ -3945,7 +3989,7 @@ async function saveExpense(){
         date:$('exDate').value,
         type:$('exType').value,
         item:$('exItem').value,
-        amount:Number(
+        amount:parseMoneyInput(
           $('exAmount').value
         ),
         memo:$('exMemo').value
@@ -3956,9 +4000,7 @@ async function saveExpense(){
   APP.editingExpense=
     null;
 
-  $('expenseForm')
-    .classList
-    .add('hidden');
+  setExpenseFormOpen(false);
 
   loadFinance();
 }
@@ -4486,22 +4528,30 @@ document.addEventListener(
         APP.editingExpense=
           null;
 
-        $('expenseForm')
-          .classList
-          .remove('hidden');
+        setExpenseFormOpen(true,'add');
 
-        $('exDate').value=
-          today();
+        $('exDate').value=today();
+        $('exType').value='식자재';
+        $('exItem').value='';
+        $('exAmount').value='';
+        $('exMemo').value='';
+        refreshExpenseAmountPreview();
+        $('exItem').focus();
       };
 
     $('saveExpenseBtn').onclick=
       saveExpense;
 
+    if($('exAmount')){
+      $('exAmount').addEventListener('input',refreshExpenseAmountPreview);
+      $('exAmount').addEventListener('blur',refreshExpenseAmountPreview);
+    }
+
     $('cancelExpenseBtn').onclick=
-      ()=>
-        $('expenseForm')
-          .classList
-          .add('hidden');
+      ()=>{
+        APP.editingExpense=null;
+        setExpenseFormOpen(false);
+      };
 
     $('addPaymentBtn').onclick=
       async()=>{
