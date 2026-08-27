@@ -172,6 +172,21 @@ td:first-child,th:first-child{text-align:left}
 .ops-pill{display:inline-block;background:#f3f4f6;border-radius:999px;padding:4px 7px;font-size:10px;margin:2px}
 @media(max-width:900px){.ops-kpi{grid-template-columns:repeat(2,1fr)}.ops-tags{grid-template-columns:repeat(3,1fr)}.ops-record{grid-template-columns:1fr}.ops-menu{align-items:flex-start;flex-direction:column}}
 
+
+.client-edit-section{border:1px solid var(--line);border-radius:13px;overflow:hidden;margin-top:10px;background:#fff}
+.client-edit-head{padding:10px 12px;background:#f8fafc}
+.client-edit-head b{display:block}
+.client-edit-body{padding:12px}
+.client-edit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.client-edit-grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.client-calc-preview{background:#eef4ff;border:1px solid #dbeafe;border-radius:12px;padding:12px;margin-top:10px}
+.client-calc-line{display:flex;gap:7px;flex-wrap:wrap;align-items:center;font-size:12px}
+.client-help{font-size:10px;color:var(--muted);margin-top:3px}
+.client-special summary{cursor:pointer;list-style:none}
+@media(max-width:760px){
+  .client-edit-grid,.client-edit-grid.four{grid-template-columns:1fr}
+}
+
 </style>
 </head>
 
@@ -915,146 +930,137 @@ td:first-child,th:first-child{text-align:left}
         <button id="closeClientModal">✕</button>
       </div>
 
-      <div class="expense-grid">
-
-        <label>
-          배 이름<br>
-          <input id="cmName">
-        </label>
-
-        <label>
-          출조점/소속<br>
-          <input id="cmAff">
-        </label>
-
-        <label>
-          총정원<br>
-          <input id="cmCapacity" type="number">
-        </label>
-
-        <label>
-          내부등급<br>
-          <select id="cmGrade">
-            <option>A</option>
-            <option>B</option>
-            <option>C</option>
-            <option>S</option>
-          </select>
-        </label>
-
-        <label>
-          예약방식<br>
-          <select id="cmSource">
-            <option>선상24</option>
-            <option>더피싱</option>
-            <option>수기</option>
-          </select>
-        </label>
-
-        <label>
-          거래상태<br>
-          <select id="cmActive">
-            <option value="true">거래중</option>
-            <option value="false">거래중지</option>
-          </select>
-        </label>
-
-        <label>
-          배송지<br>
-          <input id="cmDelivery">
-        </label>
-
-        <label>
-          예약페이지 URL<br>
-          <input id="cmUrl">
-        </label>
-
-        <label>
-          단가<br>
-          <input id="cmPrice" type="number">
-        </label>
-
-        <label>
-          VAT<br>
-          <select id="cmVat">
-            <option>VAT별도</option>
-            <option>VAT포함</option>
-          </select>
-        </label>
-
-        <label>
-          세금계산서<br>
-          <select id="cmTaxOn">
-            <option value="false">미발행</option>
-            <option value="true">발행</option>
-          </select>
-        </label>
-
-        <label>
-          계산서 묶음<br>
-          <input id="cmTaxGroup" placeholder="비우면 거래처별 발행">
-        </label>
-
-        <label>
-          국<br>
-          <select id="cmSoup">
-            <option value="true">제공</option>
-            <option value="false">미제공</option>
-          </select>
-        </label>
-
-        <label>
-          선장 승선<br>
-          <select id="cmCaptainOn">
-            <option value="true">승선</option>
-            <option value="false">미승선</option>
-          </select>
-        </label>
-
-        <label>
-          선장 식사<br>
-          <select id="cmCaptainMeal">
-            <option value="true">먹음</option>
-            <option value="false">안먹음</option>
-          </select>
-        </label>
-
-        <label>
-          사무장 승선<br>
-          <select id="cmManagerOn">
-            <option value="true">승선</option>
-            <option value="false">미승선</option>
-          </select>
-        </label>
-
-        <label>
-          사무장 식사<br>
-          <select id="cmManagerMeal">
-            <option value="true">먹음</option>
-            <option value="false">안먹음</option>
-          </select>
-        </label>
-
-        <label>
-          서비스 적용<br>
-          <select id="cmServiceMode">
-            <option value="default">기본 규칙</option>
-            <option value="none">서비스 없음</option>
-            <option value="custom">직접 설정</option>
-          </select>
-        </label>
-
-        <div id="cmServiceCustomBox" class="hidden" style="grid-column:1/-1">
-          <div class="notice" style="margin-bottom:8px">이 거래처만 별도 서비스 기준을 사용합니다.</div>
-          <div class="expense-grid">
-            <label>2개 서비스 기준<br><input id="cmServiceTwoMin" type="number" min="1" step="1" value="22"></label>
-            <label>1개 서비스 기준<br><input id="cmServiceOneMin" type="number" min="1" step="1" value="11"></label>
-          </div>
+      
+      <div class="client-edit-section">
+        <div class="client-edit-head">
+          <b>🚢 기본정보</b>
+          <div class="client-help">배와 배송에 관한 기본 설정</div>
         </div>
-
+        <div class="client-edit-body client-edit-grid">
+          <label>배 이름<br><input id="cmName"></label>
+          <label>출조점/소속<br><input id="cmAff"></label>
+          <label>총정원<br><input id="cmCapacity" type="number"></label>
+          <label>배송지<br><input id="cmDelivery"></label>
+          <label>거래상태<br>
+            <select id="cmActive">
+              <option value="true">거래중</option>
+              <option value="false">거래중지</option>
+            </select>
+          </label>
+          <label>내부등급 ⓘ<br>
+            <select id="cmGrade">
+              <option>A</option><option>B</option><option>C</option><option>S</option>
+            </select>
+            <div class="client-help">내부 관리용 거래처 중요도</div>
+          </label>
+        </div>
       </div>
 
-      <div style="margin-top:12px">
+      <div class="client-edit-section">
+        <div class="client-edit-head">
+          <b>📅 예약정보</b>
+          <div class="client-help">예약 인원을 어디에서 가져올지 설정</div>
+        </div>
+        <div class="client-edit-body client-edit-grid">
+          <label>예약방식<br>
+            <select id="cmSource">
+              <option>선상24</option><option>더피싱</option><option>수기</option>
+            </select>
+          </label>
+          <label>예약페이지 URL<br><input id="cmUrl"></label>
+        </div>
+      </div>
+
+      <div class="client-edit-section">
+        <div class="client-edit-head">
+          <b>🍱 도시락 계산설정</b>
+          <div class="client-help">승선인원과 식사 제공 여부에 따라 손님최대와 제작수량을 확인</div>
+        </div>
+        <div class="client-edit-body">
+          <div class="client-edit-grid four">
+            <label>선장 승선<br>
+              <select id="cmCaptainOn"><option value="true">승선</option><option value="false">미승선</option></select>
+            </label>
+            <label>선장 식사<br>
+              <select id="cmCaptainMeal"><option value="true">먹음</option><option value="false">안먹음</option></select>
+            </label>
+            <label>사무장 승선<br>
+              <select id="cmManagerOn"><option value="true">승선</option><option value="false">미승선</option></select>
+            </label>
+            <label>사무장 식사<br>
+              <select id="cmManagerMeal"><option value="true">먹음</option><option value="false">안먹음</option></select>
+            </label>
+          </div>
+
+          <div class="client-calc-preview">
+            <b>💡 현재 설정으로 계산하면</b>
+            <div class="client-calc-line" style="margin-top:7px">
+              <span>총정원 <b id="cmPreviewCapacity">0명</b></span>
+              <span>→</span>
+              <span>손님 최대 <b id="cmPreviewGuestMax">0명</b></span>
+              <span>→</span>
+              <span>식사 추가 <b id="cmPreviewCrewMeals">+0개</b></span>
+            </div>
+            <div class="client-calc-line" style="margin-top:8px">
+              <span>예: 손님</span>
+              <input id="cmPreviewGuest" type="number" min="0" value="18" style="width:75px">
+              <span>명 예약 시 → <b id="cmPreviewPrepared">기본 제작 18개</b></span>
+            </div>
+          </div>
+
+          <div class="client-edit-grid" style="margin-top:10px">
+            <label>국<br>
+              <select id="cmSoup"><option value="true">제공</option><option value="false">미제공</option></select>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="client-edit-section">
+        <div class="client-edit-head">
+          <b>💰 정산정보</b>
+          <div class="client-help">판매 단가와 세금계산서 설정</div>
+        </div>
+        <div class="client-edit-body client-edit-grid">
+          <label>단가<br><input id="cmPrice" type="number"></label>
+          <label>VAT<br>
+            <select id="cmVat"><option>VAT별도</option><option>VAT포함</option></select>
+          </label>
+          <label>세금계산서<br>
+            <select id="cmTaxOn"><option value="false">미발행</option><option value="true">발행</option></select>
+          </label>
+          <label>계산서 묶음 ⓘ<br>
+            <input id="cmTaxGroup" placeholder="비우면 거래처별 발행">
+            <div class="client-help">여러 배를 한 거래처 명의로 합산 발행할 때만 입력</div>
+          </label>
+        </div>
+      </div>
+
+      <details class="client-edit-section client-special">
+        <summary class="client-edit-head">
+          <b>⭐ 특수설정</b>
+          <div class="client-help">일반 거래처는 건드리지 않아도 됩니다</div>
+        </summary>
+        <div class="client-edit-body">
+          <label>서비스 적용<br>
+            <select id="cmServiceMode">
+              <option value="default">기본 규칙</option>
+              <option value="none">서비스 없음</option>
+              <option value="custom">직접 설정</option>
+            </select>
+          </label>
+
+          <div id="cmServiceCustomBox" class="hidden" style="margin-top:10px">
+            <div class="notice" style="margin-bottom:8px">이 거래처만 별도 서비스 기준을 사용합니다.</div>
+            <div class="client-edit-grid">
+              <label>2개 서비스 기준<br><input id="cmServiceTwoMin" type="number" min="1" step="1" value="22"></label>
+              <label>1개 서비스 기준<br><input id="cmServiceOneMin" type="number" min="1" step="1" value="11"></label>
+            </div>
+          </div>
+        </div>
+      </details>
+
+<div style="margin-top:12px">
         <button class="yellow" id="saveClientBtn">저장</button>
       </div>
 
@@ -2556,6 +2562,24 @@ function refreshClientServiceCustomBox(){
   $('cmServiceCustomBox')?.classList.toggle('hidden',mode!=='custom');
 }
 
+
+function refreshClientCalcPreview(){
+  if(!$('cmCapacity'))return;
+  const capacity=Number($('cmCapacity').value)||0;
+  const captainOn=$('cmCaptainOn')?.value==='true'?1:0;
+  const managerOn=$('cmManagerOn')?.value==='true'?1:0;
+  const captainMeal=$('cmCaptainMeal')?.value==='true'?1:0;
+  const managerMeal=$('cmManagerMeal')?.value==='true'?1:0;
+  const guest=Math.max(0,Number($('cmPreviewGuest')?.value)||0);
+  const guestMax=Math.max(0,capacity-captainOn-managerOn);
+  const meals=captainMeal+managerMeal;
+
+  if($('cmPreviewCapacity'))$('cmPreviewCapacity').textContent=capacity+'명';
+  if($('cmPreviewGuestMax'))$('cmPreviewGuestMax').textContent=guestMax+'명';
+  if($('cmPreviewCrewMeals'))$('cmPreviewCrewMeals').textContent='+'+meals+'개';
+  if($('cmPreviewPrepared'))$('cmPreviewPrepared').textContent='기본 제작 '+(guest+meals)+'개';
+}
+
 function openClient(id){
 
   const c=
@@ -2636,6 +2660,7 @@ function openClient(id){
   $('cmServiceTwoMin').value=Number(c.service_two_min??serviceLocal.service_two_min??22);
   $('cmServiceOneMin').value=Number(c.service_one_min??serviceLocal.service_one_min??11);
   refreshClientServiceCustomBox();
+  refreshClientCalcPreview();
 
   $('clientModal')
     .classList
@@ -4431,6 +4456,15 @@ document.addEventListener(
     if($('cmServiceMode')){
       $('cmServiceMode').onchange=refreshClientServiceCustomBox;
     }
+
+    ['cmCapacity','cmCaptainOn','cmCaptainMeal','cmManagerOn','cmManagerMeal','cmPreviewGuest']
+      .forEach(id=>{
+        const el=$(id);
+        if(el){
+          el.addEventListener('input',refreshClientCalcPreview);
+          el.addEventListener('change',refreshClientCalcPreview);
+        }
+      });
 
     if($('backupJsonBtn')){
       $('backupJsonBtn').onclick=backupJson;
