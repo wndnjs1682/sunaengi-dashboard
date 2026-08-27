@@ -187,6 +187,13 @@ td:first-child,th:first-child{text-align:left}
   .client-edit-grid,.client-edit-grid.four{grid-template-columns:1fr}
 }
 
+
+.current-edit-wrap{display:flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap}
+.current-edit{width:58px;text-align:center;font-weight:900;padding:6px 5px;border:1px solid var(--line);border-radius:8px;background:#fff}
+.manual-lock-btn{font-size:10px;padding:5px 7px;border-radius:999px}
+.manual-lock-btn.locked{background:#eef4ff;border-color:#c7d2fe;color:#1e3a8a}
+.manual-change{display:inline-block;margin-top:4px;font-size:10px;color:#b45309;font-weight:800}
+
 </style>
 </head>
 
@@ -402,7 +409,7 @@ td:first-child,th:first-child{text-align:left}
     </div>
 
     <div class="notice">
-      빠른처리(예약마감/출항없음/수기확정)는 자동조회보다 우선 적용.
+      현재 숫자를 직접 수정하면 수기잠금됩니다. 예약현황 전체 확인을 다시 해도 잠금값은 유지되고 자동예약 변동만 표시됩니다.
       거래중지 거래처는 숨김.
     </div>
 
@@ -1974,12 +1981,37 @@ function updateRemaining(i){
   }
 }
 
+function manualLockKey(date,id){
+  return `sunaengi:manual-lock:${date}:${id}`;
+}
+
+function readManualLock(date,id){
+  try{
+    return JSON.parse(localStorage.getItem(manualLockKey(date,id))||'null');
+  }catch(e){
+    return null;
+  }
+}
+
+function writeManualLock(date,id,data){
+  localStorage.setItem(manualLockKey(date,id),JSON.stringify(data));
+}
+
+function clearManualLock(date,id){
+  localStorage.removeItem(manualLockKey(date,id));
+}
+
 function rowHtml(r,i){
 
   const o=r.order||{};
+  const lock=readManualLock(APP.date,r.id);
 
-  const cur=
-    o.reservation??null;
+  /*
+    자동조회가 새 값을 가져와도 수기잠금 중이면
+    화면/제작 기준은 잠금값을 사용한다.
+  */
+  const autoReservation=o.reservation??null;
+  const cur=lock?Number(lock.reservation):autoReservation;
 
   const delta=
     (
@@ -1990,11 +2022,15 @@ function rowHtml(r,i){
       ?cur-r.previous
       :null;
 
+  const autoChanged=
+    !!lock
+    &&
+    autoReservation!=null
+    &&
+    Number(autoReservation)!==Number(cur);
+
   let reserve;
 
-  /*
-    더피싱은 남은자리 수기 입력
-  */
   if(r.source==='더피싱'){
 
     reserve=
@@ -2012,159 +2048,231 @@ function rowHtml(r,i){
   }else{
 
     reserve=
-      cur==null
+      autoReservation==null
         ?'-'
-        :`예약 ${cur}
-          · 남은 ${Math.max(0,r.guest_max-cur)}`;
+        :`예약 ${autoReservation}
+          · 남은 ${Math.max(0,r.guest_max-autoReservation)}
+          ${autoChanged?'<div class="manual-change">⚠ 자동예약 변동</div>':''}`;
   }
+
+  /*
+    잠금 중에는 DB의 계산값이 자동조회로 덮였을 수 있으므로
+    화면에 보일 제작/유료/서비스는 잠금 당시 저장값을 우선한다.
+  */
+  const prepared=lock?.prepared ?? o.prepared ?? 0;
+  const paid=lock?.paid ?? o.paid ?? 0;
+  const service=lock?.service ?? o.service ?? 0;
 
   return `
     <tr>
-
       <td class="name">
-
         ${nameLink(r)}
-
         <div class="small">
-
-          <span class="badge b-green">
-            거래중
-          </span>
-
-          <span class="badge ${badgeSource(r.source)}">
-            ${r.source}
-          </span>
-
-          ${
-            r.soup_separate
-              ?' <span class="badge b-purple">🍲 국</span>'
-              :''
-          }
-
+          <span class="badge b-green">거래중</span>
+          <span class="badge ${badgeSource(r.source)}">${r.source}</span>
+          ${r.soup_separate?' <span class="badge b-purple">🍲 국</span>':''}
         </div>
-
       </td>
 
-      <td>
-        ${r.capacity} / ${r.guest_max}
-      </td>
+      <td>${r.capacity} / ${r.guest_max}</td>
 
-      <td>
-        ${reserve}
-      </td>
+      <td>${reserve}</td>
 
       <td id="change${i}">
-
         ${
           r.previous==null
             ?'-'
-            :`<b>${r.previous}</b>
-              →
-              ${
+            :`<b>${r.previous}</b> → ${
                 delta==null||delta===0
                   ?'-'
                   :(delta>0?'+':'')+delta
               }`
         }
-
       </td>
 
       <td>
-        <b id="current${i}">
-          ${cur??'-'}
-        </b>
-      </td>
-
-      <td
-        class="lunch"
-        id="lunch${i}"
-      >
-
-        <b>
-          ${o.prepared||0}개
-        </b>
-
-        <div class="small">
-          유료 ${o.paid||0}
-          /
-          서비스 ${o.service||0}
+        <div class="current-edit-wrap">
+          <input
+            id="currentInput${i}"
+            class="current-edit"
+            type="number"
+            min="0"
+            max="${r.guest_max}"
+            value="${cur??''}"
+            onchange="saveManualCurrent(${i})"
+            onkeydown="if(event.key==='Enter'){this.blur()}"
+          >
+          <button
+            class="manual-lock-btn ${lock?'locked':''}"
+            onclick="toggleManualLock(${i})"
+            title="${lock?'수기잠금 해제':'현재값을 수기잠금'}"
+          >
+            ${lock?'🔒 수기':'자동'}
+          </button>
         </div>
+      </td>
 
+      <td class="lunch" id="lunch${i}">
+        <b>${prepared}개</b>
+        <div class="small">
+          유료 ${paid} / 서비스 ${service}
+        </div>
       </td>
 
       <td>
-
-        <span
-          class="badge ${
-            o.status==='정상'
-            &&
-            cur!=null
-            &&
-            Number(cur)>=0
-            &&
-            Number(cur)<=4
-              ?'b-yellow'
+        <span class="badge ${
+          lock
+            ?'b-green'
+            :(
+              o.status==='정상'
+              &&
+              autoReservation!=null
+              &&
+              Number(autoReservation)>=0
+              &&
+              Number(autoReservation)<=4
+                ?'b-yellow'
+                :(
+                  o.status==='정상'
+                    ?'b-green'
+                    :'b-gray'
+                )
+            )
+        }">
+          ${
+            lock
+              ?'수기잠금'
               :(
                 o.status==='정상'
-                ||
-                o.status==='수기확정'
-                  ?'b-green'
-                  :'b-gray'
+                &&
+                autoReservation!=null
+                &&
+                Number(autoReservation)>=0
+                &&
+                Number(autoReservation)<=4
+                  ?'출항확인'
+                  :(o.status||'확인필요')
               )
-          }"
-        >
-          ${
-            o.status==='정상'
-            &&
-            cur!=null
-            &&
-            Number(cur)>=0
-            &&
-            Number(cur)<=4
-              ?'출항확인'
-              :(o.status||'확인필요')
           }
         </span>
-
+        ${autoChanged?'<div class="manual-change">⚠ 변동</div>':''}
       </td>
 
       <td>
-
         <div class="quick">
-
-          <button
-            onclick="quick(${i},'예약마감')"
-          >
-            예약마감
-          </button>
-
-          <button
-            onclick="quick(${i},'출항없음')"
-          >
-            출항없음
-          </button>
-
-          <button
-            onclick="manualConfirm(${i})"
-          >
-            수기확정
-          </button>
-
+          <button onclick="quick(${i},'예약마감')">예약마감</button>
+          <button onclick="quick(${i},'출항없음')">출항없음</button>
         </div>
-
       </td>
 
-      <td>
-        ${r.delivery||'-'}
-      </td>
-
+      <td>${r.delivery||'-'}</td>
     </tr>
   `;
+}
+
+function previewManualCalc(r,reservation){
+  const prepared=Math.max(
+    0,
+    Number(reservation||0)
+    +(r.captain_meal?1:0)
+    +(r.manager_meal?1:0)
+  );
+
+  /*
+    거래처별 서비스 규칙이 있으면 우선 적용.
+    없으면 현재 기본 규칙(22→2 / 11→1)을 사용한다.
+  */
+  const local=readClientServiceLocal(r.id);
+  const mode=r.service_mode||local?.service_mode||'default';
+
+  let service=0;
+
+  if(mode==='none'){
+    service=0;
+  }else if(mode==='custom'){
+    const two=Number(r.service_two_min??local?.service_two_min??22);
+    const one=Number(r.service_one_min??local?.service_one_min??11);
+    service=prepared>=two?2:(prepared>=one?1:0);
+  }else{
+    const cfg=getServiceConfigFromInputs();
+    service=prepared>=cfg.twoMin?2:(prepared>=cfg.oneMin?1:0);
+  }
+
+  return {
+    prepared,
+    service,
+    paid:Math.max(0,prepared-service)
+  };
+}
+
+async function saveManualCurrent(i){
+
+  const r=APP.rows[i];
+  const input=$('currentInput'+i);
+
+  if(!r||!input)return;
+
+  const reservation=Math.max(0,Number(input.value)||0);
+  const q=previewManualCalc(r,reservation);
+
+  /*
+    먼저 잠금 정보를 남겨 전체 자동조회가 실행되어도
+    화면상 최종 확정값을 복구할 수 있게 한다.
+  */
+  writeManualLock(APP.date,r.id,{
+    reservation,
+    prepared:q.prepared,
+    paid:q.paid,
+    service:q.service,
+    locked_at:new Date().toISOString()
+  });
+
+  try{
+    await api('/api/order',{
+      method:'POST',
+      body:JSON.stringify({
+        date:APP.date,
+        client_id:r.id,
+        reservation,
+        service:q.service,
+        status:'수기확정',
+        confirm_method:'수기잠금'
+      })
+    });
+
+    saveState(
+      `🔒 ${r.name} ${reservation}명 수기잠금 · 제작 ${q.prepared} · 유료 ${q.paid} · 서비스 ${q.service}`
+    );
+
+    await loadDay();
+
+  }catch(e){
+    saveState('⚠️ '+e.message);
+  }
+}
+
+async function toggleManualLock(i){
+
+  const r=APP.rows[i];
+  const lock=readManualLock(APP.date,r.id);
+
+  if(lock){
+    clearManualLock(APP.date,r.id);
+    saveState(`🔓 ${r.name} 자동조회로 복귀`);
+    await loadDay();
+    return;
+  }
+
+  await saveManualCurrent(i);
 }
 
 async function quick(i,status){
 
   const r=APP.rows[i];
+
+  if(status==='출항없음'){
+    clearManualLock(APP.date,r.id);
+  }
 
   const b={
     date:APP.date,
@@ -2176,70 +2284,17 @@ async function quick(i,status){
   if(status!=='출항없음'){
 
     if(r.source==='더피싱'){
-
-      b.remaining=
-        Number(
-          $('remain'+i).value
-        );
-
+      b.remaining=Number($('remain'+i).value);
     }else{
-
-      b.reservation=
-        r.order.reservation??0;
+      const lock=readManualLock(APP.date,r.id);
+      b.reservation=lock?Number(lock.reservation):(r.order.reservation??0);
     }
   }
 
-  await api(
-    '/api/order',
-    {
-      method:'POST',
-      body:JSON.stringify(b)
-    }
-  );
-
-  loadDay();
-}
-
-async function manualConfirm(i){
-
-  const r=APP.rows[i];
-
-  const cur=
-    r.order.reservation??0;
-
-  const reservation=
-    prompt(
-      r.name+' 예약인원 직접입력',
-      cur
-    );
-
-  if(reservation==null){
-    return;
-  }
-
-  const service=
-    prompt(
-      '서비스 수량 (비우면 자동계산)',
-      r.order.service??''
-    );
-
-  await api(
-    '/api/order',
-    {
-      method:'POST',
-      body:JSON.stringify({
-        date:APP.date,
-        client_id:r.id,
-        reservation:Number(reservation)||0,
-        service:
-          service===''
-            ?null
-            :Number(service)||0,
-        status:'수기확정',
-        confirm_method:'수기확정'
-      })
-    }
-  );
+  await api('/api/order',{
+    method:'POST',
+    body:JSON.stringify(b)
+  });
 
   loadDay();
 }
@@ -2254,10 +2309,40 @@ async function scanAll(){
 
   try{
 
+    /*
+      수기잠금 행은 자동조회 전에 기억해두고,
+      조회가 DB를 덮더라도 즉시 수기확정값을 다시 저장한다.
+      (백엔드 수정 전에도 잠금 보호가 동작하도록 한 안전장치)
+    */
+    const lockedRows=(APP.rows||[])
+      .map(r=>({r,lock:readManualLock(APP.date,r.id)}))
+      .filter(x=>x.lock);
+
     const d=
       await api(
         '/api/sunsang?date='+APP.date
       );
+
+    for(const x of lockedRows){
+      const q=previewManualCalc(x.r,Number(x.lock.reservation));
+      await api('/api/order',{
+        method:'POST',
+        body:JSON.stringify({
+          date:APP.date,
+          client_id:x.r.id,
+          reservation:Number(x.lock.reservation),
+          service:q.service,
+          status:'수기확정',
+          confirm_method:'수기잠금'
+        })
+      });
+      writeManualLock(APP.date,x.r.id,{
+        ...x.lock,
+        prepared:q.prepared,
+        paid:q.paid,
+        service:q.service
+      });
+    }
 
     const bad=
       d.results
