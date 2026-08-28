@@ -217,7 +217,7 @@ td:first-child,th:first-child{text-align:left}
       <div class="sub">예약 · 생산 · 매출 · 입금 · 지출 · 세금계산서 · 거래처 · 시즌목표 통합관리</div>
       <div style="margin-top:6px">
         <span class="backend-badge">✅ Supabase 저장</span>
-        <span class="backend-badge">✅ Vercel 선상24 연동</span>
+        <span class="backend-badge">✅ 예약페이지 수기 확인</span>
       </div>
       <div style="font-size:11px;color:#fbe6a7;margin-top:4px">
         실사용판 · 자동저장 / 재무정보 비밀번호 보호
@@ -229,7 +229,7 @@ td:first-child,th:first-child{text-align:left}
       <input id="opDate" type="date">
       <button class="white" id="todayBtn">오늘</button>
       <button class="white" id="nextDay">▶</button>
-      <button class="yellow" id="scanAllBtn">🔄 예약현황 전체 확인</button>
+      
       <button class="white" id="financeUnlockBtn">🔓 재무정보 열림</button>
     </div>
   </div>
@@ -413,14 +413,13 @@ td:first-child,th:first-child{text-align:left}
     <div class="section-title">
       <div>
         <b>예약 관리</b>
-        <div class="small">선상24 자동조회 + 더피싱 남은자리 수기</div>
+        <div class="small">예약페이지 직접 확인 · 선상24 수기입력 + 더피싱 남은자리 수기</div>
       </div>
-      <button class="yellow">예약현황 전체 확인</button>
+      
     </div>
 
     <div class="notice">
-      현재 숫자를 직접 수정하면 수기잠금됩니다. 예약현황 전체 확인을 다시 해도 잠금값은 유지되고 자동예약 변동만 표시됩니다.
-      거래중지 거래처는 숨김.
+      배 이름을 눌러 예약페이지에서 인원을 확인한 뒤 수기로 입력합니다. 더피싱은 기존처럼 남은자리를 입력합니다. 거래중지 거래처는 숨김.
     </div>
 
     <div style="height:10px"></div>
@@ -1815,7 +1814,7 @@ function nameLink(r){
 
   /*
     1순위: 거래처 관리에서 직접 저장한 예약페이지 URL
-    2순위: 선상24 자동조회 그룹 URL
+    2순위: 선상24 예약페이지 그룹 URL
     더피싱 등은 reservation_url을 저장하면 그 주소가 우선 사용됨
   */
   const sunsangUrls={
@@ -2032,13 +2031,6 @@ function rowHtml(r,i){
       ?cur-r.previous
       :null;
 
-  const autoChanged=
-    !!lock
-    &&
-    autoReservation!=null
-    &&
-    Number(autoReservation)!==Number(cur);
-
   let reserve;
 
   if(r.source==='더피싱'){
@@ -2062,7 +2054,7 @@ function rowHtml(r,i){
         ?'-'
         :`예약 ${autoReservation}
           · 남은 ${Math.max(0,r.guest_max-autoReservation)}
-          ${autoChanged?'<div class="manual-change">⚠ 자동예약 변동</div>':''}`;
+          `;
   }
 
   /*
@@ -2116,9 +2108,9 @@ function rowHtml(r,i){
           <button
             class="manual-lock-btn ${lock?'locked':''}"
             onclick="toggleManualLock(${i})"
-            title="${lock?'수기잠금 해제':'현재값을 수기잠금'}"
+            title="${lock?'수기확정 수정':'수기 입력'}"
           >
-            ${lock?'🔒 수기':'자동'}
+            ${lock?'🔒 수기':'입력'}
           </button>
         </div>
       </td>
@@ -2166,7 +2158,7 @@ function rowHtml(r,i){
               )
           }
         </span>
-        ${autoChanged?'<div class="manual-change">⚠ 변동</div>':''}
+        
       </td>
 
       <td>
@@ -2352,7 +2344,7 @@ async function toggleManualLock(i){
   const lock=readManualLock(APP.date,r.id);
   if(lock){
     clearManualLock(APP.date,r.id);
-    saveState(`🔓 ${r.name} 자동조회로 복귀`);
+    saveState(`🔓 ${r.name} 수기확정 해제`);
     await loadDay();
   }else{
     openManualPop(i,$('currentInput'+i));
@@ -2390,80 +2382,6 @@ async function quick(i,status){
   });
 
   loadDay();
-}
-
-async function scanAll(){
-
-  saveState(
-    '🔄 선상24 조회 중...'
-  );
-
-  $('scanAllBtn').disabled=true;
-
-  try{
-
-    /*
-      수기잠금 행은 자동조회 전에 기억해두고,
-      조회가 DB를 덮더라도 즉시 수기확정값을 다시 저장한다.
-      (백엔드 수정 전에도 잠금 보호가 동작하도록 한 안전장치)
-    */
-    const lockedRows=(APP.rows||[])
-      .map(r=>({r,lock:readManualLock(APP.date,r.id)}))
-      .filter(x=>x.lock);
-
-    const d=
-      await api(
-        '/api/sunsang?date='+APP.date
-      );
-
-    for(const x of lockedRows){
-      const q=previewManualCalc(x.r,Number(x.lock.reservation));
-      await api('/api/order',{
-        method:'POST',
-        body:JSON.stringify({
-          date:APP.date,
-          client_id:x.r.id,
-          reservation:Number(x.lock.reservation),
-          service:q.service,
-          status:'수기확정',
-          confirm_method:'수기잠금'
-        })
-      });
-      writeManualLock(APP.date,x.r.id,{
-        ...x.lock,
-        prepared:q.prepared,
-        paid:q.paid,
-        service:q.service
-      });
-    }
-
-    const bad=
-      d.results
-        .filter(x=>!x.ok)
-        .length;
-
-    saveState(
-      `☁️ 조회 완료 ${
-        d.results.length-bad
-      }척${
-        bad
-          ?' · 확인 '+bad+'척'
-          :''
-      }`
-    );
-
-    await loadDay();
-
-  }catch(e){
-
-    saveState(
-      '⚠️ '+e.message
-    );
-
-  }finally{
-
-    $('scanAllBtn').disabled=false;
-  }
 }
 
 async function financeUnlock(){
@@ -4783,9 +4701,6 @@ document.addEventListener(
 
     $('opDate').onchange=
       ()=>loadDay();
-
-    $('scanAllBtn').onclick=
-      scanAll;
 
     $('financeUnlockBtn').onclick=
       financeUnlock;
