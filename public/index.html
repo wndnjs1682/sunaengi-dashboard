@@ -2172,6 +2172,12 @@ function rowHtml(r,i){
   `;
 }
 
+function getServiceConfigFromInputs(){
+  const twoMin=Math.max(1,Math.round(Number($('serviceTwoMin')?.value)||22));
+  const oneMin=Math.max(1,Math.round(Number($('serviceOneMin')?.value)||11));
+  return {twoMin,oneMin};
+}
+
 function previewManualCalc(r,reservation){
   const prepared=Math.max(
     0,
