@@ -2101,16 +2101,15 @@ function rowHtml(r,i){
             min="0"
             max="${r.guest_max}"
             value="${cur??''}"
-            readonly
-            onclick="openManualPop(${i},this)"
-            onkeydown="if(event.key==='Enter'){event.preventDefault();openManualPop(${i},this)}"
+            onchange="saveManualCurrent(${i})"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"
           >
           <button
             class="manual-lock-btn ${lock?'locked':''}"
             onclick="toggleManualLock(${i})"
-            title="${lock?'수기확정 수정':'수기 입력'}"
+            title="${lock?'상세 수정':'상세 입력'}"
           >
-            ${lock?'🔒 수기':'입력'}
+            ${lock?'🔒 수기':'상세'}
           </button>
         </div>
       </td>
