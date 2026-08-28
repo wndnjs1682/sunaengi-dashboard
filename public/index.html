@@ -2101,6 +2101,7 @@ function rowHtml(r,i){
             min="0"
             max="${r.guest_max}"
             value="${cur??''}"
+            oninput="previewManualCurrentRow(${i})"
             onchange="saveManualCurrent(${i})"
             onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"
           >
@@ -2206,6 +2207,31 @@ function previewManualCalc(r,reservation){
   };
 }
 
+
+function previewManualCurrentRow(i){
+  const r=APP.rows[i];
+  const input=$('currentInput'+i);
+  const lunch=$('lunch'+i);
+  const change=$('change'+i);
+  if(!r||!input)return;
+
+  const reservation=Math.max(0,Number(input.value)||0);
+  const q=previewManualCalc(r,reservation);
+
+  if(lunch){
+    lunch.innerHTML=`<b>${q.prepared}개</b><div class="small">유료 ${q.paid} / 서비스 ${q.service}</div>`;
+  }
+
+  if(change){
+    if(r.previous==null){
+      change.innerHTML='-';
+    }else{
+      const delta=reservation-Number(r.previous);
+      change.innerHTML=`<b>${r.previous}</b> → ${delta===0?'-':((delta>0?'+':'')+delta)}`;
+    }
+  }
+}
+
 async function saveManualCurrent(i){
 
   const r=APP.rows[i];
@@ -2235,6 +2261,8 @@ async function saveManualCurrent(i){
         date:APP.date,
         client_id:r.id,
         reservation,
+        prepared:q.prepared,
+        paid:q.paid,
         service:q.service,
         status:'수기확정',
         confirm_method:'수기잠금'
