@@ -1735,6 +1735,12 @@ function renderToday(d){
   $('sumPaid').textContent=
     d.summary.paid+'개';
 
+  // 운영기록 KPI도 오늘 주문 집계와 같은 값 사용
+  if($('opsPrepared')) $('opsPrepared').textContent=d.summary.prepared||0;
+  if($('opsPaid')) $('opsPaid').textContent=d.summary.paid||0;
+  if($('opsService')) $('opsService').textContent=d.summary.service||0;
+  if($('opsClients')) $('opsClients').textContent=(d.rows||[]).filter(r=>Number(r.order?.prepared||0)>0).length;
+
   if(APP.financeToken){
 
     $('sumSales').textContent=
@@ -4922,6 +4928,88 @@ function initOpsUI(){
     $('opsWasteBox')?.classList.toggle('hidden',!selected.has('폐기발생'));
   };
 
+  const setTags=(items=[])=>{
+    selected.clear();
+    (Array.isArray(items)?items:[]).forEach(x=>selected.add(x));
+    if(!selected.size) selected.add('정상');
+    paint();
+  };
+
+  const menuInputs=()=>[...document.querySelectorAll('.ops-menu-input')];
+  const updateMenuSummary=()=>{
+    const vals=menuInputs().map(i=>i.value.trim()).filter(Boolean);
+    $('opsMenuSummary').textContent=vals.length?vals.join(' · '):'메뉴를 입력해 주세요';
+  };
+
+  function clearOpsForm(){
+    setTags(['정상']);
+    menuInputs().forEach(i=>i.value='');
+    updateMenuSummary();
+    if($('opsMemo')) $('opsMemo').value='';
+    if($('opsStart')) $('opsStart').value='';
+    if($('opsEnd')) $('opsEnd').value='';
+    if($('opsWorkers')) $('opsWorkers').value='';
+    if($('opsWasteItem')) $('opsWasteItem').value='';
+    if($('opsWasteQty')) $('opsWasteQty').value='';
+    if($('opsWasteReason')) $('opsWasteReason').value='출항취소';
+  }
+
+  function fillOpsForm(rec){
+    if(!rec){ clearOpsForm(); return; }
+    setTags(rec.tags||['정상']);
+    const menu=Array.isArray(rec.menu)?rec.menu:[];
+    menuInputs().forEach((i,idx)=>i.value=menu[idx]||'');
+    updateMenuSummary();
+    $('opsMemo').value=rec.memo||'';
+    $('opsStart').value=rec.start_time||'';
+    $('opsEnd').value=rec.end_time||'';
+    $('opsWorkers').value=rec.workers||'';
+    $('opsWasteItem').value=rec.waste_item||'';
+    $('opsWasteQty').value=rec.waste_qty||'';
+    $('opsWasteReason').value=rec.waste_reason||'출항취소';
+  }
+
+  async function loadOpsDate(date){
+    try{
+      const d=await api('/api/operations?date='+encodeURIComponent(date));
+      fillOpsForm(d.item||null);
+    }catch(e){
+      console.error(e);
+      clearOpsForm();
+    }
+  }
+
+  function renderOpsRecent(items=[]){
+    if(!$('opsRecent')) return;
+    if(!items.length){
+      $('opsRecent').innerHTML='<div class="small" style="padding:14px 4px">저장된 운영기록이 없습니다.</div>';
+      return;
+    }
+    $('opsRecent').innerHTML=items.map(x=>{
+      const tg=(x.tags||[]).map(t=>`<span class="badge b-gray">${t}</span>`).join(' ');
+      const menu=(x.menu||[]).filter(Boolean).join(' · ');
+      return `<div class="card" style="margin:8px 0;padding:12px">
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:center">
+          <b>${x.op_date}</b><div>${tg}</div>
+        </div>
+        <div class="small" style="margin-top:5px">제작 ${Number(x.prepared||0).toLocaleString()} · 유료 ${Number(x.paid||0).toLocaleString()} · 서비스 ${Number(x.service||0).toLocaleString()} · 거래처 ${Number(x.client_count||0)}척</div>
+        ${menu?`<div style="margin-top:5px">🍱 ${menu}</div>`:''}
+        ${x.memo?`<div style="margin-top:5px">📝 ${x.memo}</div>`:''}
+      </div>`;
+    }).join('');
+  }
+
+  async function loadOpsRange(){
+    const start=$('histStart').value||today().slice(0,8)+'01';
+    const end=$('histEnd').value||today();
+    try{
+      const d=await api(`/api/operations?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`);
+      renderOpsRecent(d.items||[]);
+    }catch(e){
+      if($('opsRecent')) $('opsRecent').innerHTML='<div class="small" style="color:#b91c1c;padding:10px">'+e.message+'</div>';
+    }
+  }
+
   tags.forEach(b=>b.onclick=()=>{
     const t=b.dataset.opstag;
     if(t==='정상'){
@@ -4938,17 +5026,66 @@ function initOpsUI(){
     $('opsMenuEdit').classList.toggle('hidden');
   };
 
-  document.querySelectorAll('.ops-menu-input').forEach(x=>x.addEventListener('input',()=>{
-    const vals=[...document.querySelectorAll('.ops-menu-input')].map(i=>i.value.trim()).filter(Boolean);
-    $('opsMenuSummary').textContent=vals.length?vals.join(' · '):'메뉴를 입력해 주세요';
+  menuInputs().forEach(x=>x.addEventListener('input',updateMenuSummary));
+
+  $('saveOpsBtn').onclick=async()=>{
+    const btn=$('saveOpsBtn');
+    const date=APP.date||$('opDate').value||today();
+    const menu=menuInputs().map(i=>i.value.trim()).filter(Boolean);
+    const payload={
+      op_date:date,
+      prepared:Number(String($('opsPrepared').textContent||0).replace(/[^0-9.-]/g,''))||0,
+      paid:Number(String($('opsPaid').textContent||0).replace(/[^0-9.-]/g,''))||0,
+      service:Number(String($('opsService').textContent||0).replace(/[^0-9.-]/g,''))||0,
+      client_count:Number(String($('opsClients').textContent||0).replace(/[^0-9.-]/g,''))||0,
+      tags:[...selected],
+      menu,
+      memo:$('opsMemo').value.trim(),
+      start_time:$('opsStart').value||null,
+      end_time:$('opsEnd').value||null,
+      workers:$('opsWorkers').value?Number($('opsWorkers').value):null,
+      waste_item:selected.has('폐기발생')?$('opsWasteItem').value.trim():'',
+      waste_qty:selected.has('폐기발생')?(Number($('opsWasteQty').value)||0):0,
+      waste_reason:selected.has('폐기발생')?$('opsWasteReason').value:''
+    };
+    btn.disabled=true;
+    const old=btn.textContent;
+    btn.textContent='저장 중...';
+    try{
+      await api('/api/operations',{method:'POST',body:JSON.stringify(payload)});
+      btn.textContent='✓ 저장완료';
+      saveState('☁️ 운영기록 저장됨');
+      await loadOpsRange();
+      setTimeout(()=>btn.textContent=old,1200);
+    }catch(e){
+      alert('운영기록 저장 실패: '+e.message);
+      btn.textContent=old;
+    }finally{
+      btn.disabled=false;
+    }
+  };
+
+  // 기존 조회 버튼은 주문/지출/입금 내역 + 운영기록을 같이 새로고침
+  if($('histQueryBtn')){
+    const oldHist=$('histQueryBtn').onclick;
+    $('histQueryBtn').onclick=async()=>{
+      try{ if(typeof oldHist==='function') await oldHist(); else await loadHistory(); }catch(e){ console.error(e); }
+      await loadOpsRange();
+    };
+  }
+
+  // 운영기록 탭에 들어올 때 선택 날짜 기록과 최근 기록 불러오기
+  document.querySelectorAll('.tab[data-page="history"]').forEach(b=>b.addEventListener('click',()=>{
+    setTimeout(()=>{
+      loadOpsDate(APP.date||$('opDate').value||today());
+      loadOpsRange();
+    },0);
   }));
 
-  $('saveOpsBtn').onclick=()=>{
-    alert('운영기록 화면 구성은 완료되었습니다. 실제 저장은 운영기록 API/DB 연결 후 활성화됩니다.');
-  };
+  // 날짜 이동 시 해당 날짜 운영기록도 함께 전환
+  $('opDate')?.addEventListener('change',()=>loadOpsDate($('opDate').value||today()));
   paint();
 }
-
 
 setTimeout(initOpsUI,0);
 </script>
