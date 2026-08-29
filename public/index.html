@@ -2037,7 +2037,7 @@ function currentMoveForRow(r,cur){
 
 function refreshTodayManualSummary(){
   if(!APP.rows?.length)return;
-  let prepared=0, paid=0, changed=0, netDelta=0;
+  let prepared=0, soup=0, paid=0, changed=0, netDelta=0;
   APP.rows.forEach((r,i)=>{
     const input=$('currentInput'+i);
     if(!input)return;
@@ -2045,10 +2045,14 @@ function refreshTodayManualSummary(){
     const q=previewManualCalc(r,qty);
     prepared+=q.prepared;
     paid+=q.paid;
+    // 국 제공 거래처는 현재 총 제작수량과 정확히 1:1로 합산한다.
+    // 백엔드 summary.soup의 과거/예약값을 섞지 않는다.
+    if(r.soup_separate) soup+=q.prepared;
     const m=readQtyMove(APP.date,r.id);
     if(m && Number(m.delta)!==0){changed++;netDelta+=Number(m.delta)||0;}
   });
   if($('sumPrepared')) $('sumPrepared').textContent=prepared+'개';
+  if($('sumSoup')) $('sumSoup').textContent=soup+'개';
   if($('sumPaid')) $('sumPaid').textContent=paid+'개';
   if($('sumChanged')) $('sumChanged').textContent=changed+'건 · '+(netDelta>0?'+':'')+netDelta+'개';
 }
@@ -2278,16 +2282,9 @@ function previewManualCurrentRow(i){
     }
   }
 
-  // 입력 즉시 총 제작/유료도 같이 움직이게 한다.
-  let prepared=0, paid=0;
-  APP.rows.forEach((row,j)=>{
-    const el=$('currentInput'+j);
-    if(!el)return;
-    const qq=previewManualCalc(row,Math.max(0,Number(el.value)||0));
-    prepared+=qq.prepared; paid+=qq.paid;
-  });
-  if($('sumPrepared')) $('sumPrepared').textContent=prepared+'개';
-  if($('sumPaid')) $('sumPaid').textContent=paid+'개';
+  // 도시락/국/유료 합계는 반드시 같은 현재 입력값으로 한 번에 다시 계산한다.
+  // 서로 다른 기준값을 쓰면 도시락 +1인데 국 +10처럼 합계가 어긋날 수 있다.
+  refreshTodayManualSummary();
 }
 
 async function saveManualCurrent(i){
