@@ -4971,7 +4971,7 @@ function initOpsUI(){
 
   async function loadOpsDate(date){
     try{
-      const d=await api('/api/operations?date='+encodeURIComponent(date));
+      const d=await api('/api/history?mode=operations&date='+encodeURIComponent(date));
       fillOpsForm(d.item||null);
     }catch(e){
       console.error(e);
@@ -5003,7 +5003,7 @@ function initOpsUI(){
     const start=$('histStart').value||today().slice(0,8)+'01';
     const end=$('histEnd').value||today();
     try{
-      const d=await api(`/api/operations?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`);
+      const d=await api(`/api/history?mode=operations&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`);
       renderOpsRecent(d.items||[]);
     }catch(e){
       if($('opsRecent')) $('opsRecent').innerHTML='<div class="small" style="color:#b91c1c;padding:10px">'+e.message+'</div>';
@@ -5052,7 +5052,7 @@ function initOpsUI(){
     const old=btn.textContent;
     btn.textContent='저장 중...';
     try{
-      await api('/api/operations',{method:'POST',body:JSON.stringify(payload)});
+      await api('/api/history?mode=operations',{method:'POST',body:JSON.stringify(payload)});
       btn.textContent='✓ 저장완료';
       saveState('☁️ 운영기록 저장됨');
       await loadOpsRange();
