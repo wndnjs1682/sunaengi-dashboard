@@ -495,7 +495,7 @@ td:first-child,th:first-child{text-align:left}
     <div class="expense-extra">
       <label>입금일<br><input id="payDate" type="date"></label>
       <label>거래처<br><select id="payClient" style="min-width:220px;width:100%"></select></label>
-      <label>입금액<br><input id="payAmount"></label>
+      <label>입금액<br><input id="payAmount" type="text" inputmode="numeric" autocomplete="off" placeholder="0"></label>
       <label>메모<br><input id="payMemo"></label>
 
       <div>
@@ -3635,12 +3635,32 @@ function populatePaymentClients(){
     '<option value="">거래처 선택</option>'
     +
     ids.map(id=>
-      `<option value="${id}">${escapeHtml(clientNameById(id))} · 미수 ${won(totals[id])}</option>`
+      `<option value="${id}">${escapeHtml(clientNameById(id))}</option>`
     ).join('');
 
   if(current && ids.includes(String(current))){
     select.value=current;
   }
+}
+
+
+function parseMoneyInput(v){
+  return Number(String(v??'').replace(/[^0-9.-]/g,''))||0;
+}
+
+function formatMoneyInputValue(v){
+  const n=String(v??'').replace(/[^0-9]/g,'');
+  return n ? Number(n).toLocaleString('ko-KR') : '';
+}
+
+function bindPaymentAmountFormatting(){
+  const el=$('payAmount');
+  if(!el || el.dataset.moneyBound==='1') return;
+  el.dataset.moneyBound='1';
+  el.addEventListener('input',()=>{
+    const raw=el.value.replace(/[^0-9]/g,'');
+    el.value=raw ? Number(raw).toLocaleString('ko-KR') : '';
+  });
 }
 
 function setDueFilter(mode,button){
@@ -3959,7 +3979,7 @@ function editPayment(raw){
     p.client_id;
 
   $('payAmount').value=
-    p.amount;
+    formatMoneyInputValue(p.amount);
 
   $('payMemo').value=
     p.memo||'';
@@ -3975,7 +3995,7 @@ async function savePayment(){
     return;
   }
 
-  if(!(Number($('payAmount').value)>0)){
+  if(!(parseMoneyInput($('payAmount').value)>0)){
     alert('입금액을 입력해주세요.');
     $('payAmount').focus();
     return;
@@ -3989,7 +4009,7 @@ async function savePayment(){
         id:APP.editingPayment,
         date:$('payDate').value,
         client_id:$('payClient').value,
-        amount:Number(
+        amount:parseMoneyInput(
           $('payAmount').value
         ),
         memo:$('payMemo').value
@@ -4546,6 +4566,8 @@ async function loadHistory(){
 document.addEventListener(
   'DOMContentLoaded',
   ()=>{
+
+    bindPaymentAmountFormatting();
 
     $('opDate').value=
       today();
