@@ -285,10 +285,35 @@ td:first-child,th:first-child{text-align:left}
   .expense-summary,.achievement-grid,.profit-grid,.month-grid{grid-template-columns:1fr 1fr}
 }
 
+
+/* ===== 사이트 전체 로그인 ===== */
+.site-lock{position:fixed;inset:0;z-index:20000;background:linear-gradient(135deg,#0b1f3a,#173a65);display:flex;align-items:center;justify-content:center;padding:20px}
+.site-lock.hidden{display:none}
+.site-login-card{width:min(420px,100%);background:#fff;border-radius:20px;padding:26px;box-shadow:0 24px 70px #0006}
+.site-login-logo{font-size:34px;text-align:center;margin-bottom:6px}
+.site-login-title{font-size:22px;font-weight:950;text-align:center;color:#102a4d}
+.site-login-sub{font-size:12px;color:#6b7280;text-align:center;margin:6px 0 20px}
+.site-login-card input{width:100%;height:48px;font-size:18px;text-align:center;letter-spacing:2px;margin-bottom:10px}
+.site-login-card button{width:100%;height:48px;background:#102a4d;color:#fff;font-size:16px}
+.site-login-error{min-height:20px;margin-top:10px;text-align:center;color:#b91c1c;font-size:12px;font-weight:800}
+.site-logout-btn{background:#ffffff1a;color:#fff;border:1px solid #ffffff35;padding:8px 10px;font-size:11px}
+@media(max-width:760px){.site-login-card{padding:22px 18px}.site-login-title{font-size:20px}}
+
 </style>
 </head>
 
 <body>
+<div id="siteLock" class="site-lock">
+  <div class="site-login-card">
+    <div class="site-login-logo">⚓</div>
+    <div class="site-login-title">수냉이네 운영 대시보드</div>
+    <div class="site-login-sub">등록된 비밀번호를 입력해야 접속할 수 있습니다.</div>
+    <input id="sitePassword" type="password" inputmode="numeric" autocomplete="current-password" placeholder="비밀번호">
+    <button id="siteLoginBtn" type="button">로그인</button>
+    <div id="siteLoginError" class="site-login-error"></div>
+  </div>
+</div>
+
 <div class="app">
 
 <div class="header">
@@ -312,6 +337,7 @@ td:first-child,th:first-child{text-align:left}
       <button class="white" id="nextDay">▶</button>
       
       <button class="white" id="financeUnlockBtn">🔓 재무정보 열림</button>
+          <button id="siteLogoutBtn" class="site-logout-btn" type="button">로그아웃</button>
     </div>
   </div>
 
@@ -1483,6 +1509,7 @@ let APP={
   rows:[],
   clients:[],
   financeToken:sessionStorage.getItem('financeToken')||'',
+  siteToken:sessionStorage.getItem('siteToken')||'',
   date:'',
   editingClient:null,
   editingExpense:null,
@@ -1500,8 +1527,9 @@ async function api(url,opt={}){
     'Content-Type':'application/json'
   };
 
-  if(APP.financeToken){
-    opt.headers['x-finance-token']=APP.financeToken;
+  const authToken=APP.financeToken||APP.siteToken;
+  if(authToken){
+    opt.headers['x-finance-token']=authToken;
   }
 
   const r=await fetch(url,opt);
@@ -2571,6 +2599,61 @@ async function quick(i,status){
   });
 
   loadDay();
+}
+
+
+function siteTokenNotExpired(token){
+  try{
+    const body=String(token||'').split('.')[0];
+    if(!body)return false;
+    const pad='='.repeat((4-body.length%4)%4);
+    const json=JSON.parse(atob((body+pad).replace(/-/g,'+').replace(/_/g,'/')));
+    return Number(json.exp||0)>Date.now();
+  }catch(e){
+    return false;
+  }
+}
+
+function showSiteLock(show=true){
+  const lock=$('siteLock');
+  if(!lock)return;
+  lock.classList.toggle('hidden',!show);
+  if(show)setTimeout(()=>$('sitePassword')?.focus(),50);
+}
+
+async function siteLogin(){
+  const pw=$('sitePassword')?.value||'';
+  const btn=$('siteLoginBtn');
+  const err=$('siteLoginError');
+  if(!pw){
+    if(err)err.textContent='비밀번호를 입력해주세요.';
+    return;
+  }
+  if(btn){btn.disabled=true;btn.textContent='확인 중...';}
+  if(err)err.textContent='';
+  try{
+    const d=await api('/api/auth',{method:'POST',body:JSON.stringify({password:pw})});
+    APP.siteToken=d.token||'';
+    APP.financeToken=d.token||'';
+    sessionStorage.setItem('siteToken',APP.siteToken);
+    sessionStorage.setItem('financeToken',APP.financeToken);
+    if($('sitePassword'))$('sitePassword').value='';
+    showSiteLock(false);
+    financeMask();
+    if(APP.date)await loadDay();
+  }catch(e){
+    if(err)err.textContent=e.message||'로그인에 실패했습니다.';
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='로그인';}
+  }
+}
+
+function siteLogout(){
+  APP.siteToken='';
+  APP.financeToken='';
+  sessionStorage.removeItem('siteToken');
+  sessionStorage.removeItem('financeToken');
+  location.reload();
 }
 
 async function financeUnlock(){
@@ -4647,6 +4730,26 @@ async function loadHistory(){
 document.addEventListener(
   'DOMContentLoaded',
   ()=>{
+
+    if($('siteLoginBtn'))$('siteLoginBtn').onclick=siteLogin;
+    if($('sitePassword'))$('sitePassword').addEventListener('keydown',e=>{
+      if(e.key==='Enter'){e.preventDefault();siteLogin();}
+    });
+    if($('siteLogoutBtn'))$('siteLogoutBtn').onclick=siteLogout;
+
+    if(APP.siteToken && siteTokenNotExpired(APP.siteToken)){
+      showSiteLock(false);
+      if(!APP.financeToken){
+        APP.financeToken=APP.siteToken;
+        sessionStorage.setItem('financeToken',APP.siteToken);
+      }
+    }else{
+      APP.siteToken='';
+      APP.financeToken='';
+      sessionStorage.removeItem('siteToken');
+      sessionStorage.removeItem('financeToken');
+      showSiteLock(true);
+    }
 
     bindPaymentAmountFormatting();
 
