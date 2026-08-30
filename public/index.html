@@ -204,6 +204,87 @@ td:first-child,th:first-child{text-align:left}
 .manual-pop-actions{display:flex;justify-content:flex-end;gap:7px;margin-top:10px}
 .current-edit{cursor:pointer}
 
+
+
+/* ===== 모바일 전용 레이아웃 (PC 760px 초과는 기존 화면 그대로) ===== */
+@media (max-width:760px){
+  body{padding-bottom:76px;-webkit-text-size-adjust:100%}
+  .app{padding:0 6px 10px}
+  .header{border-radius:0 0 16px 16px;padding:13px 10px 10px;position:relative}
+  .header-top{display:block}
+  h1{font-size:20px}
+  .sub{display:none}
+  .header-top>div:first-child>div[style*="margin-top:6px"]{display:none}
+  .header-top>div:first-child>div[style*="font-size:11px"]{display:none}
+  .datebar{margin-top:10px;display:grid;grid-template-columns:42px minmax(130px,1fr) 56px 42px;gap:5px}
+  .datebar button,.datebar input{min-height:42px;padding:7px 5px}
+  .datebar #financeUnlockBtn{grid-column:1/-1;min-height:36px;font-size:11px}
+  /* 기존 HTML에 오늘 버튼이 중복돼 있어 모바일에서는 두 번째 버튼 숨김 */
+  .datebar #todayBtn + #todayBtn{display:none}
+
+  /* 상단 탭을 모바일 하단 고정 내비게이션으로 사용 */
+  .tabs{position:fixed;z-index:9000;left:0;right:0;bottom:0;margin:0;padding:5px 5px calc(5px + env(safe-area-inset-bottom));gap:3px;background:#102a4d;border-top:1px solid #ffffff26;box-shadow:0 -5px 18px #0002;overflow-x:auto;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{flex:0 0 76px;min-height:52px;padding:7px 4px;border-radius:9px;font-size:10px;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.2}
+  .tab.on{background:#fff;color:var(--navy)}
+
+  .section{margin-top:8px}
+  .card{border-radius:12px;padding:10px}
+  .hero{gap:7px;margin-top:8px}
+  .goal{padding:12px;border-radius:13px}
+  .goal-v{font-size:21px}
+  .primary-summary{gap:6px}
+  .primary{padding:11px}
+  .primary .v,.primary .v.big{font-size:27px}
+  .g5,.g4,.g3,.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .g5>.card:last-child{grid-column:1/-1}
+  .v{font-size:22px}
+  .k{font-size:10px}
+  .section-title{align-items:flex-start}
+  .notice{font-size:11px;padding:9px}
+
+  /* 표는 모바일에서 가로 스크롤 + 첫 열 고정 */
+  .scroll{margin-left:-10px;margin-right:-10px;padding:0 10px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{min-width:900px;font-size:11px}
+  th,td{padding:8px 6px}
+  table th:first-child,table td:first-child{position:sticky;left:0;z-index:2;background:#fff;box-shadow:2px 0 4px #0000000d}
+  table th:first-child{background:#f8fafc;z-index:3}
+  .current-edit{width:54px;min-height:38px;font-size:15px}
+  .quick button,.manual-lock-btn{min-height:34px}
+
+  /* 폼/필터는 손가락 입력에 맞게 */
+  input,select,button{font-size:16px}
+  .filter,.rangebar,.lock-row{align-items:stretch}
+  .filter>*,.rangebar>*{max-width:100%}
+  .filter input,.filter select,.rangebar input,.rangebar select{min-height:42px}
+  .expense-grid,.expense-extra,.client-edit-grid,.client-edit-grid.four{grid-template-columns:1fr}
+  .expense-summary,.achievement-grid,.profit-grid,.month-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .manage-row{grid-template-columns:28px 1fr;gap:6px}
+  .invoice{grid-template-columns:1fr 1fr}
+
+  /* 운영기록 */
+  .ops-kpi{grid-template-columns:repeat(2,1fr);gap:6px}
+  .ops-tags{grid-template-columns:repeat(3,1fr);gap:5px}
+  .ops-tag{min-height:42px;padding:8px 4px}
+  .ops-menu{padding:8px}
+  .ops-record{grid-template-columns:1fr}
+
+  /* 팝업은 모바일 화면 중앙/하단에서 안전하게 */
+  .manual-pop{position:fixed!important;left:8px!important;right:8px!important;bottom:82px!important;top:auto!important;width:auto;max-width:none;max-height:72vh;overflow:auto}
+  .manual-pop-grid{grid-template-columns:repeat(3,1fr)}
+  .modal>div,.modal .card{max-width:calc(100vw - 16px)!important}
+  .liveSave{bottom:78px;right:8px}
+}
+
+@media (max-width:420px){
+  .g5,.g4,.g3,.g2{grid-template-columns:1fr 1fr}
+  .goal-top{align-items:flex-start}
+  .pills{gap:3px}
+  .pill{font-size:9px;padding:3px 5px}
+  .ops-tags{grid-template-columns:repeat(2,1fr)}
+  .expense-summary,.achievement-grid,.profit-grid,.month-grid{grid-template-columns:1fr 1fr}
+}
+
 </style>
 </head>
 
