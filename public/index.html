@@ -302,6 +302,16 @@ td:first-child,th:first-child{text-align:left}
 .site-logout-btn{background:#ffffff1a;color:#fff;border:1px solid #ffffff35;padding:8px 10px;font-size:11px}
 @media(max-width:760px){.site-login-card{padding:22px 18px}.site-login-title{font-size:20px}}
 
+
+/* playful daily production + Danang journey */
+.today-fun-msg{margin-top:8px;font-size:15px;font-weight:800;line-height:1.35;min-height:21px}
+.progress.journey{position:relative;overflow:visible;margin-top:22px;margin-bottom:16px;height:18px}
+.progress.journey .bar{position:absolute;left:0;top:0;height:100%;transition:width .7s ease}
+.journey-plane{position:absolute;top:50%;left:0;transform:translate(-50%,-55%);font-size:25px;z-index:3;transition:left .7s ease;filter:drop-shadow(0 2px 2px rgba(0,0,0,.18))}
+.journey-start,.journey-end{position:absolute;top:25px;font-size:12px;font-weight:800;white-space:nowrap}
+.journey-start{left:0}.journey-end{right:0}
+.journey-meta{display:flex;justify-content:space-between;gap:10px;margin-top:26px;font-size:13px;font-weight:800}
+.journey-checkpoint{font-size:13px;font-weight:800;margin-top:6px}
 </style>
 </head>
 
@@ -371,9 +381,14 @@ td:first-child,th:first-child{text-align:left}
         </div>
       </div>
 
-      <div class="progress">
+      <div class="progress journey">
         <div class="bar" id="goalBar"></div>
+        <div class="journey-plane" id="journeyPlane">✈️</div>
+        <div class="journey-start">🏠 안면도</div>
+        <div class="journey-end">🌴 다낭</div>
       </div>
+      <div class="journey-meta"><span id="journeyPct">0.0%</span><span id="journeyRemain">다낭까지 계산 중</span></div>
+      <div class="journey-checkpoint" id="journeyCheckpoint">🧳 출발 준비 중!</div>
 
       <div class="pills">
         <span class="pill" id="preseasonBonus">8월 보너스 0개</span>
@@ -390,6 +405,7 @@ td:first-child,th:first-child{text-align:left}
       <div class="card primary">
         <div class="k">오늘 도시락</div>
         <div class="v big" id="sumPrepared">0개</div>
+        <div class="today-fun-msg" id="todayFunMsg">🍱 오늘도 시작!</div>
       </div>
 
       <div class="card primary">
@@ -1831,6 +1847,7 @@ function renderToday(d){
 
   $('sumPrepared').textContent=
     d.summary.prepared+'개';
+  updateTodayFun(d.summary.prepared);
 
   $('sumSoup').textContent=
     d.summary.soup+'개';
@@ -2175,6 +2192,47 @@ function currentMoveForRow(r,cur){
   return {previous,current:Number.isFinite(current)?current:cur,delta:Number.isFinite(delta)?delta:null};
 }
 
+function todayFunMessage(n){
+  n=Math.max(0,Number(n)||0);
+  if(n===300)return '🎯 딱 300! 숫자까지 완벽하다';
+  if(n===400)return '💥 400의 벽 돌파! 주방 비상';
+  if(n>=500)return '👑 전설의 하루 · 이 정도면 도시락 왕국';
+  if(n>=475)return '🛸 지구 물량 맞나요? 거의 500개';
+  if(n>=450)return '🚨 도시락 공장 풀가동!';
+  if(n>=425)return '🤯 손이 몇 개인지 모르겠다';
+  if(n>=400)return '💥 400 돌파 · 오늘 미쳤다!';
+  if(n>=375)return '🚀 주방 풀부스터 · 400이 보인다';
+  if(n>=350)return '🔥🔥 불난 주방 · 손보다 도시락이 빠르다';
+  if(n>=325)return '😵 정신없이 나간다 · 그래도 간다!';
+  if(n>=300)return '🔥 손에 불난다! 300클럽 입장';
+  if(n>=280)return '🏃 멈추면 안 된다 · 300 코앞';
+  if(n>=260)return '🎉 목표 넘겼다 · 오늘도 적립 성공';
+  if(n>=250)return '🎯 목표선 도착! 다낭 한 걸음 더';
+  if(n>=230)return '💪 거의 왔다 · 250까지 조금만!';
+  if(n>=210)return '🔥 본게임 제대로 시작';
+  if(n>=190)return '🍱 200개가 눈앞이다';
+  if(n>=170)return '🏃 주방에 속도가 붙는다';
+  if(n>=150)return '⚡ 반찬통이 쉴 틈이 없다';
+  if(n>=130)return '🥢 손이 슬슬 빨라진다';
+  if(n>=110)return '🍱 세 자릿수 돌파 · 바빠진다';
+  if(n>=90)return '😎 100개 코앞 · 워밍업 끝';
+  if(n>=70)return '👟 슬슬 속도 올려볼까';
+  if(n>=50)return '🌱 가볍게 몸풀기';
+  if(n>=30)return '🥣 주방 시동 거는 중';
+  if(n>0)return '☀️ 오늘도 도시락 출발!';
+  return '💤 아직 조용하다 · 출항을 기다리는 중';
+}
+function updateTodayFun(n){ if($('todayFunMsg')) $('todayFunMsg').textContent=todayFunMessage(n); }
+function journeyMessage(p){
+  if(p>=100)return '🏖️ 다낭 도착!!! 여행 가방 꺼내자 🎉';
+  if(p>=90)return '🛫 진짜 표 알아봐야 하나?';
+  if(p>=75)return '🌴 야시장 냄새가 슬슬 난다';
+  if(p>=50)return '✈️ 절반 날아왔다!';
+  if(p>=25)return '🌊 바다 건너는 중 · 다낭이 가까워진다';
+  if(p>=10)return '🧳 짐 싸기엔 이르지만 기분은 좋다';
+  return '🏠 안면도 출발 · 도시락으로 비행기 밀어보자';
+}
+
 function refreshTodayManualSummary(){
   if(!APP.rows?.length)return;
   let prepared=0, soup=0, paid=0, changed=0, netDelta=0;
@@ -2192,6 +2250,7 @@ function refreshTodayManualSummary(){
     if(m && Number(m.delta)!==0){changed++;netDelta+=Number(m.delta)||0;}
   });
   if($('sumPrepared')) $('sumPrepared').textContent=prepared+'개';
+  updateTodayFun(prepared);
   if($('sumSoup')) $('sumSoup').textContent=soup+'개';
   if($('sumPaid')) $('sumPaid').textContent=paid+'개';
   if($('sumChanged')) $('sumChanged').textContent=changed+'건 · '+(netDelta>0?'+':'')+netDelta+'개';
@@ -3623,6 +3682,10 @@ async function refreshSeasonGauge(){
   if($('seasonDelta')) $('seasonDelta').textContent=`목표 대비 ${fmtSigned(delta)}개`;
   if($('gaugeAccum')) $('gaugeAccum').textContent=`게이지 적립 ${gaugePaid.toLocaleString()} / ${seasonTarget.toLocaleString()}개`;
   if($('goalBar')) $('goalBar').style.width=gaugePct+'%';
+  if($('journeyPlane')) $('journeyPlane').style.left=Math.min(98,Math.max(2,gaugePct))+'%';
+  if($('journeyPct')) $('journeyPct').textContent=`✈️ ${gaugePct.toFixed(1)}% 비행`;
+  if($('journeyRemain')) $('journeyRemain').textContent=`다낭까지 ${Math.max(0,seasonTarget-gaugePaid).toLocaleString()}개 남음`;
+  if($('journeyCheckpoint')) $('journeyCheckpoint').textContent=journeyMessage(gaugePct);
 }
 
 async function getSetting(key,fallback=''){
