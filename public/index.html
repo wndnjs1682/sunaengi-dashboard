@@ -708,7 +708,7 @@ td:first-child,th:first-child{text-align:left}
         </div>
       </details>
 
-<div class="client-edit-section" id="cmRetroSection"><div class="client-edit-head"><b>🕘 기존 주문 적용</b><div class="client-help">기본은 앞으로 주문부터 적용 · 필요할 때만 과거 주문을 다시 계산합니다</div></div><div class="client-edit-body"><label style="display:flex;gap:8px;align-items:center;font-weight:700"><input id="cmRetroOn" type="checkbox" style="width:auto"> 기존 주문에도 변경 설정 적용</label><div id="cmRetroBox" class="hidden" style="margin-top:10px"><div class="client-edit-grid"><label>시작일<br><input id="cmRetroStart" type="date"></label><label>종료일<br><input id="cmRetroEnd" type="date"></label></div><div class="notice" style="margin-top:10px">단가/VAT 변경은 금액을 다시 계산하고, 서비스 설정 변경은 제작수량을 유지한 채 서비스·유료수량·금액을 다시 계산합니다. 예약/제작수량은 변경하지 않습니다.</div></div></div></div><div style="margin-top:12px"><button class="yellow" id="saveClientBtn">저장</button></div>
+<div class="client-edit-section" id="cmRetroSection"><div class="client-edit-head"><b>🕘 기존 주문 적용</b><div class="client-help">기본은 앞으로 주문부터 적용 · 필요할 때만 과거 주문을 다시 계산합니다</div></div><div class="client-edit-body"><label style="display:flex;gap:8px;align-items:center;font-weight:700"><input id="cmRetroOn" type="checkbox" style="width:auto"> 기존 주문에도 변경 설정 적용</label><div id="cmRetroBox" class="hidden" style="margin-top:10px"><div class="client-edit-grid"><label>시작일<br><input id="cmRetroStart" type="date"></label><label>종료일<br><input id="cmRetroEnd" type="date"></label></div><div class="notice" style="margin-top:10px">단가/VAT 변경은 금액을 다시 계산하고, 서비스 설정 변경은 제작수량을 유지한 채 서비스·유료수량·금액을 다시 계산합니다. 예약/제작수량은 변경하지 않습니다.</div></div></div></div><div style="margin-top:12px"><button class="yellow" id="saveClientBtn" type="button" onclick="saveClient()">저장</button></div>
 
     </div>
   </div>
@@ -5191,8 +5191,7 @@ document.addEventListener(
           .classList
           .add('hidden');
 
-    $('saveClientBtn').onclick=
-      saveClient;
+    // 거래처 저장 버튼은 HTML onclick="saveClient()"로 직접 연결
     if($('cmRetroOn')) $('cmRetroOn').onchange=()=>$('cmRetroBox')?.classList.toggle('hidden',!$('cmRetroOn').checked);
 
     $('addExpenseBtn').onclick=
