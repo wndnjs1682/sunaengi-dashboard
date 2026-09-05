@@ -708,9 +708,7 @@ td:first-child,th:first-child{text-align:left}
         </div>
       </details>
 
-<div style="margin-top:12px">
-        <button class="yellow" id="saveClientBtn">저장</button>
-      </div>
+<div class="client-edit-section" id="cmRetroSection"><div class="client-edit-head"><b>🕘 기존 주문 적용</b><div class="client-help">기본은 앞으로 주문부터 적용 · 필요할 때만 과거 주문을 다시 계산합니다</div></div><div class="client-edit-body"><label style="display:flex;gap:8px;align-items:center;font-weight:700"><input id="cmRetroOn" type="checkbox" style="width:auto"> 기존 주문에도 변경 설정 적용</label><div id="cmRetroBox" class="hidden" style="margin-top:10px"><div class="client-edit-grid"><label>시작일<br><input id="cmRetroStart" type="date"></label><label>종료일<br><input id="cmRetroEnd" type="date"></label></div><div class="notice" style="margin-top:10px">단가/VAT 변경은 금액을 다시 계산하고, 서비스 설정 변경은 제작수량을 유지한 채 서비스·유료수량·금액을 다시 계산합니다. 예약/제작수량은 변경하지 않습니다.</div></div></div></div><div style="margin-top:12px"><button class="yellow" id="saveClientBtn">저장</button></div>
 
     </div>
   </div>
@@ -3116,13 +3114,49 @@ function openClient(id){
   }
   refreshClientServiceCustomBox();
   refreshClientCalcPreview();
+  if($('cmRetroOn')) $('cmRetroOn').checked=false;
+  if($('cmRetroBox')) $('cmRetroBox').classList.add('hidden');
+  if($('cmRetroStart')) $('cmRetroStart').value='2026-09-01';
+  if($('cmRetroEnd')) $('cmRetroEnd').value=APP.date||new Date().toISOString().slice(0,10);
 
   $('clientModal')
     .classList
     .remove('hidden');
 }
 
+function retroServiceForPrepared(prepared,b){
+  prepared=Math.max(0,Number(prepared)||0);
+  if((b.service_mode||'default')==='none') return 0;
+  if((b.service_mode||'default')==='custom'){
+    const two=Math.max(1,Number(b.service_two_min)||22), one=Math.max(1,Number(b.service_one_min)||10);
+    return prepared>=two?2:(prepared>=one?1:0);
+  }
+  const cfg=getGlobalServiceRule(); return prepared>=cfg.twoMin?2:(prepared>=cfg.oneMin?1:0);
+}
+function retroMoney(paid,unit,vatMode){
+  const gross=Math.max(0,Number(paid)||0)*Math.max(0,Number(unit)||0);
+  if(vatMode==='VAT포함'){const supply=Math.round(gross/1.1);return {supply_amount:supply,vat_amount:gross-supply,total_amount:gross};}
+  const vat=Math.round(gross*0.1);return {supply_amount:gross,vat_amount:vat,total_amount:gross+vat};
+}
+async function retroPreviewAndApply(clientId,b,start,end){
+  if(!clientId) throw new Error('새 거래처는 기존 주문이 없습니다.');
+  if(!start||!end||start>end) throw new Error('기존 주문 적용 기간을 확인해주세요.');
+  const h=await api(`/api/history?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`);
+  const rows=(Array.isArray(h.orders)?h.orders:[]).filter(o=>String(o.client_id)===String(clientId));
+  if(!rows.length){alert(`${start} ~ ${end}\n변경할 기존 주문이 없습니다.`);return {changed:0};}
+  let oldTotal=0,newTotal=0;
+  const changes=rows.map(o=>{const prepared=Math.max(0,Number(o.prepared)||0);const service=Math.min(prepared,retroServiceForPrepared(prepared,b));const paid=Math.max(0,prepared-service);const money=retroMoney(paid,b.unit_price,b.vat_mode);oldTotal+=Number(o.total_amount)||0;newTotal+=money.total_amount;return {o,prepared,service,paid,...money};});
+  const fmt=n=>Math.round(Number(n)||0).toLocaleString('ko-KR')+'원', diff=newTotal-oldTotal;
+  if(!confirm(`기존 주문 소급 적용 미리보기\n\n거래처: ${b.name}\n기간: ${start} ~ ${end}\n변경 대상: ${changes.length}건\n기존 매출: ${fmt(oldTotal)}\n변경 후 매출: ${fmt(newTotal)}\n차이: ${diff>=0?'+':''}${fmt(diff)}\n\n예약/제작수량은 유지됩니다.\n정말 적용할까요?`)) return {changed:0,cancelled:true};
+  for(const x of changes){await api('/api/order',{method:'POST',body:JSON.stringify({date:x.o.order_date,client_id:clientId,reservation:Number(x.o.reservation)||0,prepared:x.prepared,service:x.service,paid:x.paid,unit_price:Number(b.unit_price)||0,vat_mode:b.vat_mode,supply_amount:x.supply_amount,vat_amount:x.vat_amount,total_amount:x.total_amount,status:x.o.status||'수기확정',confirm_method:x.o.confirm_method||'설정소급'})});}
+  alert(`적용 완료 · ${changes.length}건\n${fmt(oldTotal)} → ${fmt(newTotal)}`);return {changed:changes.length};
+}
+
 async function saveClient(){
+
+  const retroOn=!!$('cmRetroOn')?.checked;
+  const retroStart=$('cmRetroStart')?.value||'';
+  const retroEnd=$('cmRetroEnd')?.value||'';
 
   const old=
     APP.clients.find(
@@ -3216,6 +3250,8 @@ async function saveClient(){
       body:JSON.stringify(b)
     }
   );
+
+  if(retroOn){await retroPreviewAndApply(APP.editingClient,b,retroStart,retroEnd);}
 
   writeClientServiceLocal(APP.editingClient,{
     service_mode:b.service_mode,
@@ -5143,6 +5179,7 @@ document.addEventListener(
 
     $('saveClientBtn').onclick=
       saveClient;
+    if($('cmRetroOn')) $('cmRetroOn').onchange=()=>$('cmRetroBox')?.classList.toggle('hidden',!$('cmRetroOn').checked);
 
     $('addExpenseBtn').onclick=
       async()=>{
