@@ -3131,7 +3131,7 @@ function retroServiceForPrepared(prepared,b){
     const two=Math.max(1,Number(b.service_two_min)||22), one=Math.max(1,Number(b.service_one_min)||10);
     return prepared>=two?2:(prepared>=one?1:0);
   }
-  const cfg=getGlobalServiceRule(); return prepared>=cfg.twoMin?2:(prepared>=cfg.oneMin?1:0);
+  const cfg=getServiceConfigFromInputs(); return prepared>=cfg.twoMin?2:(prepared>=cfg.oneMin?1:0);
 }
 function retroMoney(paid,unit,vatMode){
   const gross=Math.max(0,Number(paid)||0)*Math.max(0,Number(unit)||0);
@@ -3152,7 +3152,7 @@ async function retroPreviewAndApply(clientId,b,start,end){
   alert(`적용 완료 · ${changes.length}건\n${fmt(oldTotal)} → ${fmt(newTotal)}`);return {changed:changes.length};
 }
 
-async function saveClient(){
+async function saveClientCore(){
 
   const retroOn=!!$('cmRetroOn')?.checked;
   const retroStart=$('cmRetroStart')?.value||'';
@@ -3341,6 +3341,20 @@ function rangeFor(mode,baseDate=today()){
 function setPresetOn(selector,clicked){
   document.querySelectorAll(selector).forEach(x=>x.classList.remove('on'));
   clicked?.classList.add('on');
+}
+
+async function saveClient(){
+  const btn=$('saveClientBtn');
+  const oldText=btn?.textContent||'저장';
+  try{
+    if(btn){btn.disabled=true;btn.textContent='저장 중...';}
+    await saveClientCore();
+  }catch(e){
+    console.error(e);
+    alert('거래처 저장 실패: '+(e?.message||e));
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=oldText;}
+  }
 }
 
 async function applySalesRange(mode,button){
