@@ -927,6 +927,52 @@ td:first-child,th:first-child{text-align:left}
     <tbody id="expenseRows" class="hidden"></tbody>
   </div>
 
+  <div id="expenseEditModal" class="modal hidden"
+       style="position:fixed;inset:0;background:#0008;z-index:12000;display:flex;align-items:center;justify-content:center;padding:16px">
+    <div class="card" style="width:min(720px,100%);max-height:90vh;overflow:auto">
+      <div class="section-title">
+        <div>
+          <b style="font-size:18px">✏️ 지출 수정</b>
+          <div class="small">현재 위치를 유지한 채 바로 수정합니다.</div>
+        </div>
+        <button type="button" onclick="closeExpenseEditModal()">✕</button>
+      </div>
+
+      <div class="expense-extra" style="margin-top:10px">
+        <label>날짜<br><input id="editExDate" type="date"></label>
+
+        <label>구분<br>
+          <select id="editExType">
+            <option>식자재</option>
+            <option>용기</option>
+            <option>기름값</option>
+            <option>인건비</option>
+            <option>기타지출</option>
+            <option>장비·시설투자</option>
+            <option>생활비</option>
+          </select>
+        </label>
+
+        <label>항목<br><input id="editExItem" placeholder="예: 주유, 마트, 전기공사"></label>
+
+        <label>금액<br>
+          <div style="display:flex;align-items:center;gap:6px">
+            <input id="editExAmount" inputmode="numeric" autocomplete="off" placeholder="0" style="width:100%">
+            <b>원</b>
+          </div>
+          <div class="small" id="editExAmountPreview" style="margin-top:4px">0원</div>
+        </label>
+
+        <label>메모<br><input id="editExMemo"></label>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">
+        <button type="button" onclick="closeExpenseEditModal()">취소</button>
+        <button type="button" class="yellow" id="saveExpenseEditBtn" onclick="saveExpenseEditModal()">✓ 수정 저장</button>
+      </div>
+    </div>
+  </div>
+
 </section>
 
 <section class="page" id="tax">
@@ -4608,39 +4654,103 @@ function setExpenseFormOpen(open,mode='add'){
   }
 }
 
+function refreshExpenseEditAmountPreview(){
+  const n=parseMoneyInput($('editExAmount')?.value||0);
+  if($('editExAmountPreview')) $('editExAmountPreview').textContent=won(n);
+}
+
+function closeExpenseEditModal(){
+  $('expenseEditModal')?.classList.add('hidden');
+  APP.editingExpense=null;
+}
+
 function editExpense(raw){
+  const x=JSON.parse(raw);
 
-  const x=
-    JSON.parse(raw);
+  APP.editingExpense=x.id;
 
-  APP.editingExpense=
-    x.id;
+  $('editExDate').value=x.expense_date||today();
 
-  setExpenseFormOpen(true,'edit');
-
-  $('exDate').value=
-    x.expense_date;
-
-  if($('exType')){
+  const typeEl=$('editExType');
+  if(typeEl){
     const wanted=String(x.type||'기타지출');
-    if(![...$('exType').options].some(o=>o.value===wanted)){
+    if(![...typeEl.options].some(o=>o.value===wanted)){
       const opt=document.createElement('option');
-      opt.value=wanted; opt.textContent=wanted;
-      $('exType').appendChild(opt);
+      opt.value=wanted;
+      opt.textContent=wanted;
+      typeEl.appendChild(opt);
     }
-    $('exType').value=wanted;
+    typeEl.value=wanted;
   }
 
-  $('exItem').value=
-    x.item||'';
+  $('editExItem').value=x.item||'';
+  $('editExAmount').value=(Number(x.amount)||0).toLocaleString('ko-KR');
+  $('editExMemo').value=x.memo||'';
+  refreshExpenseEditAmountPreview();
 
-  $('exAmount').value=
-    (Number(x.amount)||0).toLocaleString('ko-KR');
+  $('expenseEditModal')?.classList.remove('hidden');
 
-  refreshExpenseAmountPreview();
+  // 금액 입력 시 콤마/미리보기 갱신
+  const amount=$('editExAmount');
+  if(amount && !amount.dataset.bound){
+    amount.dataset.bound='1';
+    amount.addEventListener('input',()=>{
+      const pos=amount.selectionStart;
+      amount.value=formatMoneyInput(amount.value);
+      try{ amount.setSelectionRange(pos,pos); }catch(e){}
+      refreshExpenseEditAmountPreview();
+    });
+  }
+}
 
-  $('exMemo').value=
-    x.memo||'';
+async function saveExpenseEditModal(){
+  if(!APP.editingExpense) return;
+
+  const btn=$('saveExpenseEditBtn');
+  const oldText=btn?.textContent||'✓ 수정 저장';
+
+  try{
+    if(btn){
+      btn.disabled=true;
+      btn.textContent='저장 중...';
+    }
+
+    await needFinance();
+
+    await api(
+      '/api/expense',
+      {
+        method:'POST',
+        body:JSON.stringify({
+          id:APP.editingExpense,
+          date:$('editExDate').value,
+          type:$('editExType').value,
+          item:$('editExItem').value,
+          amount:parseMoneyInput($('editExAmount').value),
+          memo:$('editExMemo').value
+        })
+      }
+    );
+
+    // 현재 스크롤 위치 기억 → 목록 재조회 후 복원
+    const keepY=window.scrollY;
+
+    closeExpenseEditModal();
+
+    await loadFinance();
+
+    requestAnimationFrame(()=>{
+      window.scrollTo({top:keepY,left:0,behavior:'instant'});
+    });
+
+  }catch(e){
+    alert('지출 수정 저장 실패: '+e.message);
+  }finally{
+    if(btn){
+      btn.disabled=false;
+      btn.textContent=oldText;
+    }
+  }
 }
 
 async function saveExpense(){
@@ -5635,6 +5745,23 @@ function initOpsUI(){
 }
 
 setTimeout(initOpsUI,0);
+
+document.addEventListener('click',e=>{
+  const modal=$('expenseEditModal');
+  if(modal && !modal.classList.contains('hidden') && e.target===modal){
+    closeExpenseEditModal();
+  }
+});
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    const modal=$('expenseEditModal');
+    if(modal && !modal.classList.contains('hidden')){
+      closeExpenseEditModal();
+    }
+  }
+});
+
 </script>
 
 </body>
