@@ -4131,20 +4131,19 @@ async function loadProfit(){
     const normalizedOperating=operating+equipment+household+taxSaved;
     const normalizedAfterTax=normalizedOperating-taxSaved;
 
-    // 개당 지표: 장비/생활비가 본업 마진을 왜곡하지 않도록 분리
-    const paidCount=Number(s.paid)||0;
-    const directCostFoodContainer=(Number(f.food)||0)+(Number(f.container)||0);
-    const perDirect=paidCount ? directCostFoodContainer/paidCount : 0;
-    const perNormalizedProfit=paidCount ? normalizedOperating/paidCount : 0;
-    const finalCashForPerUnit=normalizedOperating-taxSaved-equipment-household;
-    const perFinalCash=paidCount ? finalCashForPerUnit/paidCount : 0;
-
     // 지출 탭에서 '세금적립'으로 기록한 금액을 자동 반영
     if($('profitTaxReserve')) $('profitTaxReserve').textContent=won(taxSaved);
     if($('profitTaxReserveNote')) $('profitTaxReserveNote').textContent='지출 탭 세금적립 자동 합산';
     if($('profitAfterTax')) $('profitAfterTax').textContent=won(normalizedAfterTax);
     if($('profitAfterTaxRate')) $('profitAfterTaxRate').textContent=
       '가용이익률 '+pct(normalizedAfterTax,sales).toFixed(1)+'%';
+    // 표시용 보조지표만 추가: 기존 손익 계산에는 영향 없음
+    if($('perNormalizedOperating')){
+      const paidForDisplay = Number(paid)||0;
+      $('perNormalizedOperating').textContent =
+        paidForDisplay ? '개당 정상 영업이익 '+won(normalizedOperating/paidForDisplay)
+                       : '개당 정상 영업이익 —';
+    }
 
     $('profitSales').textContent=won(sales);
     $('profitFoodRate').textContent=pct(Number(f.food)||0,sales).toFixed(1)+'%';
@@ -4178,11 +4177,6 @@ async function loadProfit(){
       const finalCash=normalizedOperating-taxSaved-equipment-household;
       $('cashAfterSeparated').textContent=won(finalCash);
     }
-
-    // 개당 지표 최종 표시
-    if($('unitDirect')) $('unitDirect').textContent=won(perDirect);
-    if($('unitProfit')) $('unitProfit').textContent=won(perFinalCash);
-    if($('perNormalizedOperating')) $('perNormalizedOperating').textContent='개당 정상 영업이익 '+won(perNormalizedProfit);
 
     $('costCancel').textContent=won(c.cancel);
 
