@@ -1084,7 +1084,7 @@ td:first-child,th:first-child{text-align:left}
     <div class="card">
       <div class="k">세금적립</div>
       <div class="profit-main" id="profitTaxReserve">—</div>
-      <div class="small" id="profitTaxReserveNote">지출 탭의 세금적립 기준</div>
+      <div class="small" id="profitTaxReserveNote">지출 탭 세금적립 자동 합산</div>
     </div>
     <div class="card">
       <div class="k">세금 적립 후 사업 가용이익</div>
@@ -4092,13 +4092,17 @@ async function loadProfit(){
 
     // 값이 없는 경우 임의 세율로 새 계산하지 않는다.
     // 기존 세금 적립 계산을 보존하기 위한 안전장치다.
-    if($('profitTaxReserve')) $('profitTaxReserve').textContent=won(taxSaved);
-    const normalizedAfterTax=normalizedOperating-taxSaved;
-    if($('profitAfterTax')) $('profitAfterTax').textContent=won(normalizedAfterTax);
-    if($('profitAfterTaxRate')) $('profitAfterTaxRate').textContent='가용이익률 '+pct(normalizedAfterTax,sales).toFixed(1)+'%';
-    if($('profitTaxReserveNote')) $('profitTaxReserveNote').textContent='지출 탭 세금적립 자동 합산';
+    if($('profitTaxReserve')){
+      $('profitTaxReserve').textContent=
+        Number.isFinite(taxReserve)?won(taxReserve):'미연동';
+    }
+    if($('profitAfterTax')){
+      $('profitAfterTax').textContent=
+        Number.isFinite(afterTax)?won(afterTax):'미연동';
+    }
+    if($('profitAfterTaxRate')){
       $('profitAfterTaxRate').textContent=
-        Number.isFinite(afterTax)?('가용이익률 '+pct(afterTax,sales).toFixed(1)+'%'):'정상 영업이익에서 세금적립 차감';
+        Number.isFinite(afterTax)?('가용이익률 '+pct(afterTax,sales).toFixed(1)+'%'):'기존 세금 적립 계산값 확인 필요';
     }
     if($('profitTaxReserveNote')){
       $('profitTaxReserveNote').textContent=
@@ -4124,6 +4128,14 @@ async function loadProfit(){
     // 세금적립은 비용이 아니라 실제 통장에서 따로 빼둔 세금 준비금.
     // 장비·시설투자/생활비와 함께 정상 영업수익성에서는 분리한다.
     const normalizedOperating=operating+equipment+household+taxSaved;
+    const normalizedAfterTax=normalizedOperating-taxSaved;
+
+    // 지출 탭에서 '세금적립'으로 기록한 금액을 자동 반영
+    if($('profitTaxReserve')) $('profitTaxReserve').textContent=won(taxSaved);
+    if($('profitTaxReserveNote')) $('profitTaxReserveNote').textContent='지출 탭 세금적립 자동 합산';
+    if($('profitAfterTax')) $('profitAfterTax').textContent=won(normalizedAfterTax);
+    if($('profitAfterTaxRate')) $('profitAfterTaxRate').textContent=
+      '가용이익률 '+pct(normalizedAfterTax,sales).toFixed(1)+'%';
 
     $('profitSales').textContent=won(sales);
     $('profitFoodRate').textContent=pct(Number(f.food)||0,sales).toFixed(1)+'%';
@@ -4150,12 +4162,10 @@ async function loadProfit(){
 
     if($('normalizedOperating')) $('normalizedOperating').textContent=won(normalizedOperating);
     if($('normalizedOperatingRate')) $('normalizedOperatingRate').textContent=
-      '이익률 '+pct(normalizedOperating,sales).toFixed(1)+'% · 장비/생활비 제외';
+      '이익률 '+pct(normalizedOperating,sales).toFixed(1)+'% · 장비/생활비/세금적립 제외';
     if($('equipmentExpense')) $('equipmentExpense').textContent=won(equipment);
     if($('householdExpense')) $('householdExpense').textContent=won(household);
     if($('cashAfterSeparated')){
-      // 세금 적립 값이 있으면 적립 후 금액을 기준으로,
-      // 없으면 기존 영업이익을 표시한다.
       const finalCash=normalizedOperating-taxSaved-equipment-household;
       $('cashAfterSeparated').textContent=won(finalCash);
     }
