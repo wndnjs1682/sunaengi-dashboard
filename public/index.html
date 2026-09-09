@@ -4702,7 +4702,7 @@ async function loadExpenses(){
     );
 
   const items=d.items||[];
-  const types=['식자재','기름값','인건비','기타지출','용기','장비·시설투자','생활비'];
+  const types=['식자재','기름값','인건비','기타지출','용기','장비·시설투자','생활비','세금적립'];
   const labels={
     '식자재':'🛒 식자재',
     '기름값':'⛽ 기름값',
@@ -4710,7 +4710,8 @@ async function loadExpenses(){
     '기타지출':'••• 기타지출',
     '용기':'📦 용기',
     '장비·시설투자':'🧰 장비·시설투자',
-    '생활비':'🏠 생활비'
+    '생활비':'🏠 생활비',
+    '세금적립':'🧾 세금적립'
   };
   const grouped={};
   types.forEach(t=>grouped[t]=[]);
