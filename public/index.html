@@ -1078,6 +1078,33 @@ td:first-child,th:first-child{text-align:left}
     </div>
   </div>
 
+  <div class="section card" id="taxReserveInputCard">
+    <div class="section-title">
+      <div>
+        <b>💰 세금·부가세 적립 직접 입력</b>
+        <div class="small">조회 기간별로 실제 따로 빼둘 금액을 직접 입력해서 저장합니다.</div>
+      </div>
+      <button type="button" class="yellow" id="saveTaxReserveBtn" onclick="saveManualTaxReserve()">✓ 적립액 저장</button>
+    </div>
+    <div class="expense-extra" style="margin-top:10px">
+      <label>부가세 적립<br>
+        <div style="display:flex;align-items:center;gap:6px">
+          <input id="manualVatReserve" inputmode="numeric" autocomplete="off" placeholder="0">
+          <b>원</b>
+        </div>
+      </label>
+      <label>소득세 등 기타 세금 적립<br>
+        <div style="display:flex;align-items:center;gap:6px">
+          <input id="manualIncomeTaxReserve" inputmode="numeric" autocomplete="off" placeholder="0">
+          <b>원</b>
+        </div>
+      </label>
+    </div>
+    <div class="small" id="manualTaxReserveState" style="margin-top:8px">
+      부가세와 기타 세금을 나눠 입력하면 합계가 손익에 반영됩니다.
+    </div>
+  </div>
+
   <div class="grid g2 section" id="taxReserveCards">
     <div class="card">
       <div class="k">세금·부가세 적립</div>
@@ -3955,6 +3982,54 @@ async function saveContainerCost(){
   }
 }
 
+
+function manualTaxReserveKey(){
+  const start=$('profitStart')?.value||$('salesStart')?.value||'';
+  const end=$('profitEnd')?.value||$('salesEnd')?.value||'';
+  return 'sunaengi_manual_tax_reserve_v1|'+start+'|'+end;
+}
+
+function readManualTaxReserve(){
+  try{
+    const v=JSON.parse(localStorage.getItem(manualTaxReserveKey())||'null');
+    if(!v) return null;
+    return {
+      vat:Number(v.vat)||0,
+      income:Number(v.income)||0
+    };
+  }catch(e){
+    return null;
+  }
+}
+
+function paintManualTaxReserveInputs(){
+  const v=readManualTaxReserve();
+  if($('manualVatReserve')) $('manualVatReserve').value=v ? Number(v.vat||0).toLocaleString('ko-KR') : '';
+  if($('manualIncomeTaxReserve')) $('manualIncomeTaxReserve').value=v ? Number(v.income||0).toLocaleString('ko-KR') : '';
+}
+
+function saveManualTaxReserve(){
+  const vat=parseMoneyInput($('manualVatReserve')?.value||0);
+  const income=parseMoneyInput($('manualIncomeTaxReserve')?.value||0);
+  localStorage.setItem(manualTaxReserveKey(),JSON.stringify({vat,income,updated_at:new Date().toISOString()}));
+  if($('manualTaxReserveState')){
+    $('manualTaxReserveState').textContent='✓ 저장됨 · 부가세 '+won(vat)+' + 기타 세금 '+won(income)+' = 총 '+won(vat+income);
+  }
+  loadProfit();
+}
+
+function bindManualTaxMoneyInputs(){
+  ['manualVatReserve','manualIncomeTaxReserve'].forEach(id=>{
+    const el=$(id);
+    if(!el || el.dataset.moneyBound==='1') return;
+    el.dataset.moneyBound='1';
+    el.addEventListener('input',()=>{
+      const raw=String(el.value||'').replace(/[^0-9]/g,'');
+      el.value=raw ? Number(raw).toLocaleString('ko-KR') : '';
+    });
+  });
+}
+
 async function loadProfit(){
   await needFinance();
 
@@ -4022,6 +4097,22 @@ async function loadProfit(){
       afterTax=operating-taxReserve;
     }
 
+    // 사용자가 직접 저장한 적립액이 있으면 기존 자동값보다 우선한다.
+    const manualReserve=readManualTaxReserve();
+    if(manualReserve){
+      taxReserve=(Number(manualReserve.vat)||0)+(Number(manualReserve.income)||0);
+      afterTax=operating-taxReserve;
+    }
+
+    paintManualTaxReserveInputs();
+    bindManualTaxMoneyInputs();
+    if($('manualTaxReserveState') && manualReserve){
+      $('manualTaxReserveState').textContent=
+        '✓ 저장된 적립액 · 부가세 '+won(manualReserve.vat)+
+        ' + 기타 세금 '+won(manualReserve.income)+
+        ' = 총 '+won(taxReserve);
+    }
+
     // 값이 없는 경우 임의 세율로 새 계산하지 않는다.
     // 기존 세금 적립 계산을 보존하기 위한 안전장치다.
     if($('profitTaxReserve')){
@@ -4038,7 +4129,9 @@ async function loadProfit(){
     }
     if($('profitTaxReserveNote')){
       $('profitTaxReserveNote').textContent=
-        Number.isFinite(taxReserve)?'기존 재무 계산값 그대로 반영':'임의 계산하지 않음';
+        manualReserve
+          ? '직접 입력한 부가세·기타 세금 적립액 반영'
+          : (Number.isFinite(taxReserve)?'기존 재무 계산값 그대로 반영':'임의 계산하지 않음');
     }
 
     // 장비·시설투자와 생활비는 서버의 기존 '전체 지출' 계산에는 포함될 수 있으므로
