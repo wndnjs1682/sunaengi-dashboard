@@ -1098,6 +1098,7 @@ td:first-child,th:first-child{text-align:left}
       <div class="k">정상 영업이익</div>
       <div class="profit-main" id="normalizedOperating">—</div>
       <div class="small" id="normalizedOperatingRate">장비·시설투자·생활비 제외</div>
+      <div class="small" id="perNormalizedOperating">개당 정상 영업이익 —</div>
     </div>
     <div class="card">
       <div class="k">장비·시설투자</div>
@@ -1144,7 +1145,7 @@ td:first-child,th:first-child{text-align:left}
         <div class="row"><span>개당 식자재비</span><b id="unitFood">—</b></div>
         <div class="row"><span>개당 용기비</span><b id="unitContainer">—</b></div>
         <div class="row"><span>개당 직접원가</span><b id="unitDirect">—</b></div>
-        <div class="row"><span>개당 영업이익</span><b id="unitProfit">—</b></div>
+        <div class="row"><span>개당 최종 잔여금</span><b id="unitProfit">—</b></div>
       </div>
       <div class="small" style="margin-top:8px">
         ※ 선택 기간의 실제 지출액 ÷ 유료 판매수량 기준
@@ -4130,6 +4131,14 @@ async function loadProfit(){
     const normalizedOperating=operating+equipment+household+taxSaved;
     const normalizedAfterTax=normalizedOperating-taxSaved;
 
+    // 개당 지표: 장비/생활비가 본업 마진을 왜곡하지 않도록 분리
+    const paidCount=Number(s.paid)||0;
+    const directCostFoodContainer=(Number(f.food)||0)+(Number(f.container)||0);
+    const perDirect=paidCount ? directCostFoodContainer/paidCount : 0;
+    const perNormalizedProfit=paidCount ? normalizedOperating/paidCount : 0;
+    const finalCashForPerUnit=normalizedOperating-taxSaved-equipment-household;
+    const perFinalCash=paidCount ? finalCashForPerUnit/paidCount : 0;
+
     // 지출 탭에서 '세금적립'으로 기록한 금액을 자동 반영
     if($('profitTaxReserve')) $('profitTaxReserve').textContent=won(taxSaved);
     if($('profitTaxReserveNote')) $('profitTaxReserveNote').textContent='지출 탭 세금적립 자동 합산';
@@ -4169,6 +4178,11 @@ async function loadProfit(){
       const finalCash=normalizedOperating-taxSaved-equipment-household;
       $('cashAfterSeparated').textContent=won(finalCash);
     }
+
+    // 개당 지표 최종 표시
+    if($('unitDirect')) $('unitDirect').textContent=won(perDirect);
+    if($('unitProfit')) $('unitProfit').textContent=won(perFinalCash);
+    if($('perNormalizedOperating')) $('perNormalizedOperating').textContent='개당 정상 영업이익 '+won(perNormalizedProfit);
 
     $('costCancel').textContent=won(c.cancel);
 
